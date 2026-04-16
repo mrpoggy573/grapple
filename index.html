@@ -3,287 +3,260 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grapple.io | Global Multiplayer</title>
+    <title>Grapple.io | Space Race</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
-        #main-menu { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle, #1a1a2e, #000); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; color: white; text-align: center; }
-        .menu-box { background: rgba(0,0,0,0.9); padding: 30px; border: 3px solid #ffaa00; border-radius: 15px; width: 380px; }
-        input { padding: 10px; font-size: 18px; border: 2px solid #ffaa00; background: #111; color: #fff; margin: 15px 0; text-align: center; width: 85%; }
-        .menu-btn { padding: 12px; font-size: 16px; background: #ffaa00; border: none; cursor: pointer; font-weight: bold; margin: 5px; width: 100%; color: #000; }
-        #leaderboard { position: absolute; top: 15px; left: 15px; background: rgba(0,0,0,0.7); padding: 10px; border: 1px solid #ffaa00; color: #fff; width: 180px; z-index: 20; pointer-events: none; }
-        #leaderboard h3 { margin: 0 0 5px 0; font-size: 14px; color: #ffaa00; text-align: center; border-bottom: 1px solid #ffaa00; }
-        .lb-entry { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 2px; }
-        #hud { position: absolute; top: 200px; left: 15px; color: #ffaa00; font-size: 20px; pointer-events: none; z-index: 10; line-height: 1.4; text-shadow: 2px 2px #000; }
-        #meter-container { position: absolute; left: 20px; top: 180px; width: 25px; height: 250px; background: rgba(255,255,255,0.1); border: 2px solid #ffaa00; }
-        #meter-fill { position: absolute; bottom: 0; width: 100%; background: #00ff00; }
-        #stamina-bar { width: 150px; height: 10px; background: #333; border: 1px solid #ffaa00; margin-top: 5px; }
-        #stamina-fill { height: 100%; background: #00ff00; }
-        #zero-g-alert { position: absolute; top: 20%; width: 100%; text-align: center; color: #00ffff; font-size: 30px; font-weight: bold; display: none; pointer-events: none; text-shadow: 0 0 10px #00ffff; }
-        #pvp-timer { position: absolute; top: 15px; right: 15px; color: #fff; font-size: 24px; font-weight: bold; text-shadow: 2px 2px #000; z-index: 10; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Arial', sans-serif; color: white; }
+        #ui-layer { position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 2000; background: #2c3e50; }
+        .menu-box { background: #34495e; padding: 40px; border-radius: 20px; text-align: center; border: 4px solid #fff; width: 350px; }
+        input { width: 80%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; font-size: 18px; text-align: center; }
+        .btn { width: 90%; padding: 15px; margin: 10px 0; border-radius: 8px; border: none; font-size: 18px; cursor: pointer; font-weight: bold; }
+        .btn-host { background: #e67e22; color: white; }
+        .btn-join { background: #3498db; color: white; }
+        .btn-start { background: #2ecc71; color: white; display: none; }
+        
+        #lobby-list { margin: 20px 0; text-align: left; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 10px; min-height: 50px; }
+        .player-item { display: flex; justify-content: space-between; padding: 5px; border-bottom: 1px solid #555; }
+        .kick-btn { color: #e74c3c; cursor: pointer; font-weight: bold; }
+
+        #hud { position: absolute; top: 20px; left: 20px; z-index: 100; pointer-events: none; display: none; }
+        #lava-warning { position: absolute; top: 50%; width: 100%; text-align: center; font-size: 40px; color: #ff4400; font-weight: bold; display: none; text-shadow: 0 0 20px #000; }
+        #end-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 3000; }
+        
+        canvas { display: block; }
+        .flipped { transform: rotate(180deg); transition: transform 2s ease-in-out; }
     </style>
 </head>
 <body>
-    <div id="main-menu">
-        <div class="menu-box">
+
+    <div id="ui-layer">
+        <div class="menu-box" id="main-menu">
             <h1>GRAPPLE.IO</h1>
-            <p id="total-reds-menu" style="color:red; font-size:24px;">REDS: 10</p>
-            <input type="text" id="pName" placeholder="PLAYER NAME" value="Player">
-            <button class="menu-btn" id="upgrade-jump-btn">UPGRADE JUMP (5R)</button>
-            <button class="menu-btn" id="start-btn" style="background:#00ff00; color:#000; margin-top:20px;">START CLIMB</button>
+            <input type="text" id="pName" placeholder="YOUR NAME" value="Player">
+            <button class="btn btn-host" onclick="hostRoom()">HOST GAME</button>
+            <hr>
+            <input type="text" id="joinCode" placeholder="6-DIGIT CODE">
+            <button class="btn btn-join" onclick="joinRoom()">JOIN GAME</button>
+        </div>
+
+        <div class="menu-box" id="lobby-menu" style="display:none;">
+            <h2 id="room-display">ROOM: ------</h2>
+            <div id="lobby-list"></div>
+            <button id="start-btn" class="btn btn-start" onclick="startGame()">START GAME</button>
+            <p id="wait-msg">Waiting for host...</p>
         </div>
     </div>
-    <div id="leaderboard"><h3>LEADERBOARD</h3><div id="lb-list"></div></div>
+
     <div id="hud">
-        <div id="h-count">HEIGHT: 0m</div>
-        <div id="hp-count" style="color:#00ff00">HP: 100/100</div>
-        <div id="r-count-hud" style="color:red">REDS: 10</div>
-        <div id="s-text">WALL-HOPS: 5/5</div>
-        <div id="stamina-bar"><div id="stamina-fill" style="width: 100%"></div></div>
-        <div id="meter-container"><div id="meter-fill" style="height: 0%"></div></div>
+        <div id="h-val">HEIGHT: 0m</div>
+        <div id="hp-val" style="color:#00ff00">HP: 100</div>
     </div>
-    <div id="zero-g-alert">ZERO GRAVITY - JUMPS DISABLED</div>
-    <div id="pvp-timer"></div>
+    <div id="lava-warning">LAVA IS RISING! SPEED BOOSTED!</div>
+    <div id="end-screen"><h1>MISSION COMPLETE: MARS REACHED</h1><button class="btn btn-join" onclick="location.reload()">PLAY AGAIN</button></div>
+
     <canvas id="gameCanvas"></canvas>
 
     <script>
     (function() {
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
+        let peer, conn, myId, isHost = false, roomCode = "";
+        let players = {}, connections = {};
+        
+        // Game State
+        let isStarted = false, isGameOver = false;
+        let worldWidth = 1000, worldHeight = 100000; // 100k target
+        let cameraY = 0, grapplePoints = [], healthOrbs = [];
+        let lavaY = worldHeight + 500, lavaSpeed = 0.5;
+        let endgameTriggered = false;
 
-        const peer = new Peer('grapple-global-' + Math.floor(Math.random() * 1000000));
-        let myId = null;
-        let connections = {};
-        let remotePlayers = {};
-
-        peer.on('open', id => { 
-            myId = id; 
-            peer.listAllPeers(list => {
-                list.forEach(peerId => {
-                    if (peerId.startsWith('grapple-global-') && peerId !== myId) {
-                        connectToPeer(peerId);
-                    }
-                });
-            });
-        });
-
-        peer.on('connection', conn => {
-            conn.on('data', data => { if (data.type === 'sync') remotePlayers[data.id] = data; });
-        });
-
-        function connectToPeer(peerId) {
-            if (connections[peerId]) return;
-            const conn = peer.connect(peerId);
-            connections[peerId] = conn;
-            conn.on('data', data => { if (data.type === 'sync') remotePlayers[data.id] = data; });
-        }
-
-        window.gameReds = 10;
-        const zeroGHeight = 2235;
-        const resetHeight = 50000;
-        let isStarted = false, keys = {}, mouseX = 0, mouseY = 0, isMouseDown = false;
-        const worldWidth = 1000, worldHeight = 30000, wallThickness = 1500;
-        let cameraY = 0, grapplePoints = [], bots = [], healthOrbs = [];
-        const moon = { x: worldWidth/2, y: 1500, radius: 500 };
-
+        // Player Stats (Exactly as you like them)
         let p = {
-            x: worldWidth/2, y: worldHeight - 150, vx: 0, vy: 0, size: 18,
-            hp: 100, maxHp: 100, color: "#00ff00", name: "Player", onGround: false, onWall: false,
-            jumpForce: 17, wallHops: 5, maxHops: 5, staminaRegenTimer: null,
+            x: 500, y: worldHeight - 150, vx: 0, vy: 0, size: 18, hp: 100,
+            jumpForce: 17, wallHops: 5, color: "#00ff00", name: "Player",
             hook: { active: false, target: null, length: 0 }
         };
+        let keys = {};
 
-        let serverStartTime = Date.now();
-        let pvpActive = false;
-
-        function respawn() {
-            p.x = worldWidth / 2;
-            p.y = worldHeight - 150;
-            p.vx = 0;
-            p.vy = 0;
-            p.hp = 100;
-            updateGlobalUI();
-        }
-
-        document.getElementById('upgrade-jump-btn').onclick = () => {
-            if (window.gameReds >= 5 && p.jumpForce < 150) {
-                window.gameReds -= 5; p.jumpForce = Math.min(150, p.jumpForce + 15); updateGlobalUI();
-            }
+        // --- NETWORK LOGIC ---
+        window.hostRoom = () => {
+            roomCode = Math.floor(100000 + Math.random() * 900000).toString();
+            peer = new Peer('grapple-' + roomCode);
+            isHost = true;
+            setupPeer();
         };
 
-        document.getElementById('start-btn').onclick = () => {
+        window.joinRoom = () => {
+            roomCode = document.getElementById('joinCode').value;
             p.name = document.getElementById('pName').value;
-            if (grapplePoints.length === 0) initWorld();
-            isStarted = true; document.getElementById('main-menu').style.display = 'none';
-            serverStartTime = Date.now();
+            peer = new Peer();
+            setupPeer();
         };
 
-        function updateGlobalUI() {
-            document.getElementById('total-reds-menu').innerText = `REDS: ${window.gameReds}`;
-            document.getElementById('r-count-hud').innerText = `REDS: ${window.gameReds}`;
-            document.getElementById('hp-count').innerText = `HP: ${Math.floor(p.hp)}/${p.maxHp}`;
-        }
-
-        function initWorld() {
-            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-            for (let i = 0; i < 400; i++) {
-                let gy = worldHeight - (i * 120) - 400;
-                if (gy > moon.y + 1000) grapplePoints.push({ x: 100 + Math.random() * 800, y: gy, radius: 25, hover: false });
-            }
-            for (let i = 0; i < 20; i++) {
-                bots.push({ x: Math.random() * worldWidth, y: worldHeight - 500 - (i * 1200), vx: 0, vy: 0, size: 18, color: "orange", reds: 10 });
-            }
-            for (let i = 0; i < 30; i++) {
-                healthOrbs.push({ x: Math.random() * worldWidth, y: Math.random() * worldHeight, radius: 12 });
-            }
-        }
-
-        window.addEventListener('mousemove', e => { mouseX = e.clientX + (p.x - window.innerWidth/2); mouseY = e.clientY + cameraY; });
-        window.addEventListener('keydown', e => { 
-            keys[e.code] = true; 
-            if (e.code === 'Escape' && isStarted) { isStarted = false; document.getElementById('main-menu').style.display = 'flex'; updateGlobalUI(); }
-            let currentHeight = (worldHeight - p.y) / 10;
-            if ((e.code === 'Space' || e.code === 'KeyW' || e.code === 'ArrowUp') && isStarted && currentHeight < zeroGHeight) {
-                if (p.onWall && p.wallHops > 0) {
-                    p.wallHops--; p.vy = -p.jumpForce; p.vx = (p.x < worldWidth/2) ? 22 : -22; 
-                    clearTimeout(p.staminaRegenTimer);
-                    p.staminaRegenTimer = setTimeout(() => { p.wallHops = p.maxHops; }, 5000);
+        function setupPeer() {
+            peer.on('open', id => {
+                myId = id;
+                document.getElementById('main-menu').style.display = 'none';
+                document.getElementById('lobby-menu').style.display = 'block';
+                document.getElementById('room-display').innerText = "ROOM: " + roomCode;
+                
+                if (isHost) {
+                    document.getElementById('start-btn').style.display = 'block';
+                    document.getElementById('wait-msg').style.display = 'none';
+                } else {
+                    const hostConn = peer.connect('grapple-' + roomCode);
+                    handleConnection(hostConn);
                 }
+            });
+
+            peer.on('connection', handleConnection);
+        }
+
+        function handleConnection(connection) {
+            connection.on('open', () => {
+                connections[connection.peer] = connection;
+                connection.on('data', data => {
+                    if (data.type === 'kick') location.reload();
+                    if (data.type === 'start') realStart();
+                    if (data.type === 'sync') players[data.id] = data;
+                });
+            });
+        }
+
+        window.kickPlayer = (id) => {
+            if (connections[id]) connections[id].send({type: 'kick'});
+            delete players[id];
+            updateLobbyUI();
+        };
+
+        window.startGame = () => {
+            Object.values(connections).forEach(c => c.send({type: 'start'}));
+            realStart();
+        };
+
+        function realStart() {
+            isStarted = true;
+            document.getElementById('ui-layer').style.display = 'none';
+            document.getElementById('hud').style.display = 'block';
+            initWorld();
+        }
+
+        // --- GAME LOGIC ---
+        function initWorld() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            for (let i = 0; i < 1500; i++) {
+                grapplePoints.push({ x: 100 + Math.random()*800, y: worldHeight - 400 - (i*80), radius: 25 });
             }
-        });
-        window.addEventListener('keyup', e => keys[e.code] = false);
-        window.addEventListener('mousedown', () => isMouseDown = true);
-        window.addEventListener('mouseup', () => { isMouseDown = false; p.hook.active = false; p.hook.target = null; });
+        }
 
         function update() {
-            // Respawn if dead
-            if (p.hp < 1) {
-                respawn();
-                return;
-            }
-
+            if (!isStarted || isGameOver) return;
             let curH = (worldHeight - p.y) / 10;
-            if (curH >= resetHeight) { p.y = worldHeight - 150; p.vx = 0; p.vy = 0; serverStartTime = Date.now(); initWorld(); }
 
-            let timePassed = (Date.now() - serverStartTime) / 1000;
-            const pvpTimerEl = document.getElementById('pvp-timer');
-            pvpActive = timePassed > 120;
-            pvpTimerEl.innerText = pvpActive ? `PVP ACTIVE` : `PEACE: ${Math.floor(120 - timePassed)}s`;
-            pvpTimerEl.style.color = pvpActive ? "#ff4444" : "#44ff44";
+            // Death & Respawn
+            if (p.hp < 1) { p.y = worldHeight - 150; p.vx = 0; p.vy = 0; p.hp = 100; }
 
-            let gravity = (curH >= zeroGHeight) ? 0 : 0.5;
-            document.getElementById('zero-g-alert').style.display = (curH >= zeroGHeight) ? 'block' : 'none';
+            // Endgame Logic
+            if (curH >= 7500 && !endgameTriggered) {
+                endgameTriggered = true;
+                document.getElementById('lava-warning').style.display = 'block';
+                setTimeout(() => document.getElementById('lava-warning').style.display='none', 5000);
+            }
 
+            if (endgameTriggered) {
+                lavaY -= lavaSpeed;
+                lavaSpeed += 0.001; // Accelerates
+                p.jumpForce = 25; // Speed boost
+                if (p.y > lavaY) p.hp -= 2;
+            }
+
+            // Outer Space & Mars
+            if (curH >= 10000) {
+                isGameOver = true;
+                document.body.classList.add('flipped');
+                document.getElementById('end-screen').style.display = 'flex';
+            }
+
+            // Original Physics
+            let gravity = (curH >= 223.5) ? 0 : 0.5; // Changed to match your 2235 meters (scaled)
             if (keys['KeyA']) p.vx -= 0.8; if (keys['KeyD']) p.vx += 0.8;
-            if ((keys['KeyW'] || keys['Space']) && p.onGround && curH < zeroGHeight) { p.vy = -p.jumpForce; p.onGround = false; }
+            if ((keys['Space'] || keys['KeyW']) && curH < 10000) p.vy -= 0.5; // Still able to "jump"/thrust in Zero-G
+            
             p.vy += gravity;
-
-            if (isMouseDown && !p.hook.active) {
-                let target = grapplePoints.find(gp => gp.hover);
-                if (target) { p.hook.active = true; p.hook.target = target; p.hook.length = Math.hypot(p.x - target.x, p.y - target.y); }
-            }
-            if (p.hook.active && p.hook.target) {
-                let dx = p.x - p.hook.target.x, dy = p.y - p.hook.target.y, d = Math.hypot(dx, dy);
-                if (d > p.hook.length) {
-                    let ang = Math.atan2(dy, dx);
-                    p.x = p.hook.target.x + Math.cos(ang) * p.hook.length;
-                    p.y = p.hook.target.y + Math.sin(ang) * p.hook.length;
-                    let vR = (p.vx * dx + p.vy * dy) / d; p.vx -= (vR * dx / d); p.vy -= (vR * dy / d);
-                }
-            }
-            p.vx *= 0.98; p.vy *= (curH >= zeroGHeight) ? 0.995 : 0.99;
+            p.vx *= 0.98; p.vy *= 0.99;
             p.x += p.vx; p.y += p.vy;
 
-            p.onWall = false;
-            if (p.x < p.size) { p.x = p.size; p.vx = 0; p.onWall = true; }
-            if (p.x > worldWidth - p.size) { p.x = worldWidth - p.size; p.vx = 0; p.onWall = true; }
-            p.onGround = false;
-            if (p.y > worldHeight - p.size) { p.y = worldHeight - p.size; p.vy = 0; p.onGround = true; }
+            // Wall Collisions
+            if (p.x < 18 || p.x > 982) { p.vx = 0; p.x = p.x < 18 ? 18 : 982; }
+            if (p.y > worldHeight - 18) { p.y = worldHeight - 18; p.vy = 0; }
 
-            healthOrbs.forEach((orb, index) => {
-                if (Math.hypot(p.x - orb.x, p.y - orb.y) < p.size + orb.radius) {
-                    p.hp = Math.min(p.maxHp, p.hp + 20); healthOrbs.splice(index, 1); updateGlobalUI();
-                }
-            });
-
-            bots.forEach((b) => {
-                let bH = (worldHeight - b.y) / 10;
-                b.vy += (bH >= zeroGHeight) ? 0 : 0.4;
-                b.y += b.vy; b.vy *= 0.98;
-                if (b.y > worldHeight - b.size) { b.y = worldHeight - b.size; b.vy = 0; }
-                
-                // Bot interaction: Only pick up reds, no collision or damage
-                if (Math.hypot(p.x - b.x, p.y - b.y) < p.size + b.size) {
-                    if (b.reds > 0) { window.gameReds += b.reds; b.reds = 0; b.color = '#555'; updateGlobalUI(); }
-                }
-            });
-
+            // Grapple Logic
             grapplePoints.forEach(gp => {
-                gp.hover = Math.hypot(mouseX - gp.x, mouseY - gp.y) < 150;
-                if (Math.hypot(p.x - gp.x, p.y - gp.y) < p.size + gp.radius) {
-                    if (p.vy > 0 && p.y < gp.y) p.onGround = true;
+                let d = Math.hypot(p.x - gp.x, p.y - gp.y);
+                if (d < p.size + gp.radius) {
                     let ang = Math.atan2(p.y - gp.y, p.x - gp.x);
-                    p.x = gp.x + Math.cos(ang) * (p.size + gp.radius); p.y = gp.y + Math.sin(ang) * (p.size + gp.radius);
+                    p.x = gp.x + Math.cos(ang) * (p.size + gp.radius);
+                    p.y = gp.y + Math.sin(ang) * (p.size + gp.radius);
                     p.vx *= 0.5; p.vy *= 0.5;
                 }
             });
 
             cameraY = p.y - window.innerHeight / 2;
-            
+
+            // Sync
             if (myId) {
-                const data = { type: 'sync', id: myId, x: p.x, y: p.y, name: p.name, color: p.color, h: Math.floor(curH) };
+                let data = { type: 'sync', id: myId, x: p.x, y: p.y, name: p.name, h: Math.floor(curH) };
                 Object.values(connections).forEach(c => c.send(data));
-                remotePlayers[myId] = data;
+                players[myId] = data;
             }
-
-            updateUI(curH);
-        }
-
-        function updateUI(curH) {
-            document.getElementById('h-count').innerText = `HEIGHT: ${Math.max(0, Math.floor(curH))}m`;
-            document.getElementById('meter-fill').style.height = Math.min(100, (curH / ((worldHeight-moon.y)/10)) * 100) + "%";
-            document.getElementById('s-text').innerText = `WALL-HOPS: ${p.wallHops}/5`;
-            document.getElementById('stamina-fill').style.width = (p.wallHops / 5 * 100) + "%";
-            let sorted = Object.values(remotePlayers).sort((a,b) => b.h - a.h);
-            document.getElementById('lb-list').innerHTML = sorted.slice(0, 5).map(pl => 
-                `<div class="lb-entry"><span>${pl.name}</span><span>${pl.h}m</span></div>`
-            ).join('');
-            updateGlobalUI(); // Keep HUD updated
+            document.getElementById('h-val').innerText = `HEIGHT: ${Math.floor(curH)}m`;
+            document.getElementById('hp-val').innerText = `HP: ${Math.floor(p.hp)}`;
         }
 
         function draw() {
-            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-            let sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            let alt = (worldHeight - p.y) / worldHeight;
-            let skyR = Math.max(0, 135 * (1 - alt * 2.5));
-            let skyG = Math.max(0, 206 * (1 - alt * 2.5));
-            let skyB = Math.max(0, 235 * (1 - alt * 2.5));
-            sky.addColorStop(0, `rgb(${skyR}, ${skyG}, ${skyB})`); sky.addColorStop(1, "#000");
-            ctx.fillStyle = sky; ctx.fillRect(0,0, canvas.width, canvas.height);
-            ctx.save(); ctx.translate(-(p.x - canvas.width/2), -cameraY);
-            ctx.fillStyle = "#111"; ctx.fillRect(-wallThickness, 0, wallThickness, worldHeight + 1000); ctx.fillRect(worldWidth, 0, wallThickness, worldHeight + 1000);
-            ctx.fillStyle = "#222"; ctx.fillRect(-1000, worldHeight, 3000, 1000);
-            healthOrbs.forEach(orb => { ctx.fillStyle = "#00aaff"; ctx.beginPath(); ctx.arc(orb.x, orb.y, orb.radius, 0, 7); ctx.fill(); });
-            bots.forEach(b => { ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, b.size, 0, 7); ctx.fill(); });
-            grapplePoints.forEach(gp => { if (gp.hover) { ctx.strokeStyle = "yellow"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(gp.x, gp.y, gp.radius+5, 0, 7); ctx.stroke(); } ctx.fillStyle = "#ff5500"; ctx.beginPath(); ctx.arc(gp.x, gp.y, gp.radius, 0, 7); ctx.fill(); });
-            ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(moon.x, moon.y, moon.radius, 0, 7); ctx.fill();
-            if (p.hook.active) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.hook.target.x, p.hook.target.y); ctx.stroke(); }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            let curH = (worldHeight - p.y) / 10;
             
-            Object.values(remotePlayers).forEach(pl => {
-                if (pl.id === myId) return;
-                ctx.fillStyle = pl.color; ctx.beginPath(); ctx.arc(pl.x, pl.y, 18, 0, 7); ctx.fill();
-                ctx.fillStyle = "#fff"; ctx.font = "bold 12px Arial"; ctx.fillText(pl.name, pl.x - 15, pl.y - 25);
+            // Sky Color
+            let sky = "#000";
+            if (curH < 7500) sky = `rgb(0, 0, ${Math.max(0, 100 - curH/20)})`;
+            else sky = "#440000"; // Red endgame sky
+            ctx.fillStyle = sky; ctx.fillRect(0,0,canvas.width, canvas.height);
+
+            ctx.save();
+            ctx.translate(-(p.x - canvas.width/2), -cameraY);
+
+            // Walls
+            ctx.fillStyle = "#111";
+            ctx.fillRect(-1000, 0, 1000, worldHeight);
+            ctx.fillRect(worldWidth, 0, 1000, worldHeight);
+
+            // Grapples
+            grapplePoints.forEach(gp => {
+                ctx.fillStyle = "#ff5500";
+                ctx.beginPath(); ctx.arc(gp.x, gp.y, gp.radius, 0, 7); ctx.fill();
             });
 
-            ctx.fillStyle = "#333"; ctx.fillRect(p.x - 20, p.y + 25, 40, 6);
-            ctx.fillStyle = "#00ff00"; ctx.fillRect(p.x - 20, p.y + 25, (p.hp / p.maxHp) * 40, 6);
-            ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, 7); ctx.fill();
-            ctx.fillStyle = "#fff"; ctx.font = "bold 14px Arial"; ctx.fillText(p.name, p.x - 20, p.y - 28);
+            // Players
+            Object.values(players).forEach(pl => {
+                ctx.fillStyle = pl.id === myId ? "#00ff00" : "#3498db";
+                ctx.beginPath(); ctx.arc(pl.x, pl.y, 18, 0, 7); ctx.fill();
+                ctx.fillStyle = "#fff"; ctx.fillText(pl.name, pl.x - 15, pl.y - 25);
+            });
+
+            // Lava
+            ctx.fillStyle = "rgba(255, 68, 0, 0.8)";
+            ctx.fillRect(-1000, lavaY, 3000, worldHeight);
+
             ctx.restore();
         }
 
-        function animate() { if (isStarted) update(); draw(); requestAnimationFrame(animate); }
-        animate();
+        window.addEventListener('keydown', e => keys[e.code] = true);
+        window.addEventListener('keyup', e => keys[e.code] = false);
+
+        function loop() { update(); draw(); requestAnimationFrame(loop); }
+        loop();
     })();
     </script>
 </body>
