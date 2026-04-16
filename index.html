@@ -6,28 +6,24 @@
     <title>Grapple.io | Space Race</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; color: white; }
-        
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; color: white; transition: transform 2s ease-in-out; }
         #ui-layer { position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 2000; background: radial-gradient(circle, #1a1a2e, #000); }
         .menu-box { background: rgba(0,0,0,0.9); padding: 30px; border-radius: 15px; text-align: center; border: 3px solid #ffaa00; width: 380px; }
         h1 { font-size: 40px; color: #fff; margin-bottom: 10px; text-shadow: 0 0 10px #ffaa00; }
         input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 5px; border: 2px solid #ffaa00; background: #111; color: #fff; font-size: 18px; text-align: center; }
-        .btn { width: 100%; padding: 12px; margin: 5px 0; border-radius: 5px; border: none; font-size: 16px; cursor: pointer; font-weight: bold; text-transform: uppercase; }
-        .btn-host { background: #ffaa00; color: #000; }
-        .btn-join { background: #3498db; color: #fff; }
-        .btn-solo { background: #2ecc71; color: #000; }
-        .btn-start { background: #ffaa00; color: #000; display: none; margin-top: 20px; }
         
-        #lobby-list { margin: 15px 0; text-align: left; background: rgba(255,255,255,0.05); padding: 10px; border: 1px solid #444; min-height: 50px; font-size: 14px; }
-        .player-item { display: flex; justify-content: space-between; padding: 5px; color: #ffaa00; }
-        .kick-btn { color: #ff4444; cursor: pointer; font-weight: bold; }
+        /* Buttons */
+        .btn { width: 100%; padding: 12px; margin: 5px 0; border-radius: 5px; border: none; font-size: 16px; cursor: pointer; font-weight: bold; text-transform: uppercase; }
+        .btn-solo { background: #2ecc71; color: #000; border-bottom: 4px solid #27ae60; }
+        .btn-host { background: #ffaa00; color: #000; border-bottom: 4px solid #e67e22; }
+        .btn-join { background: #3498db; color: #fff; border-bottom: 4px solid #2980b9; }
+        .btn-start { background: #ffaa00; color: #000; display: none; margin-top: 20px; }
 
         #hud { position: absolute; top: 20px; left: 20px; z-index: 100; pointer-events: none; display: none; }
         .hud-item { color: #ffaa00; font-size: 20px; font-weight: bold; text-shadow: 2px 2px #000; margin-bottom: 5px; }
-        #lava-warning { position: absolute; top: 30%; width: 100%; text-align: center; font-size: 40px; color: #ff4400; font-weight: bold; display: none; text-shadow: 0 0 20px #000; }
-        
+        #lava-warning { position: absolute; top: 30%; width: 100%; text-align: center; font-size: 40px; color: #ff4400; font-weight: bold; display: none; }
         #end-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 3000; }
-        .flipped { transform: rotate(180deg); transition: transform 2s ease-in-out; }
+        .flipped { transform: rotate(180deg); }
     </style>
 </head>
 <body>
@@ -36,15 +32,19 @@
         <div class="menu-box" id="main-menu">
             <h1>GRAPPLE.IO</h1>
             <input type="text" id="pName" placeholder="PLAYER NAME" value="Player">
+            
             <button class="btn btn-solo" onclick="startSolo()">SOLO CLIMB</button>
-            <button class="btn btn-host" onclick="hostRoom()">HOST MULTIPLAYER</button>
+            
+            <p style="color: #666; margin: 10px 0;">OR MULTIPLAYER</p>
+            
+            <button class="btn btn-host" onclick="hostRoom()">HOST GAME</button>
             <input type="text" id="joinCode" placeholder="6-DIGIT CODE">
-            <button class="btn btn-join" onclick="joinRoom()">JOIN LOBBY</button>
+            <button class="btn btn-join" onclick="joinRoom()">JOIN GAME</button>
         </div>
 
         <div class="menu-box" id="lobby-menu" style="display:none;">
-            <h2 id="room-display" style="color:#ffaa00">ROOM: ------</h2>
-            <div id="lobby-list"></div>
+            <h2 id="room-display" style="color:#ffaa00">CODE: ------</h2>
+            <div id="lobby-list" style="margin:10px 0; text-align:left; background:rgba(0,0,0,0.3); padding:10px;"></div>
             <button id="start-btn" class="btn btn-start" onclick="startGame()">START GAME</button>
             <p id="wait-msg" style="font-size:12px; color:#888;">Waiting for host...</p>
         </div>
@@ -55,12 +55,9 @@
         <div class="hud-item" id="hp-val">HP: 100</div>
         <div class="hud-item" id="r-val" style="color:red">REDS: 10</div>
     </div>
-    
+
     <div id="lava-warning">LAVA IS RISING!</div>
-    <div id="end-screen">
-        <h1 style="color:#ffaa00">MARS REACHED</h1>
-        <button class="btn btn-host" style="width:200px" onclick="location.reload()">REPLAY</button>
-    </div>
+    <div id="end-screen"><h1>MARS REACHED</h1><button class="btn btn-host" style="width:200px" onclick="location.reload()">REPLAY</button></div>
 
     <canvas id="gameCanvas"></canvas>
 
@@ -68,154 +65,137 @@
     (function() {
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
-        let peer, myId, isHost = false, roomCode = "";
+        let peer, myId, isHost = false, soloMode = false;
         let players = {}, connections = {};
-        
-        let isStarted = false, isGameOver = false, soloMode = false;
-        const worldWidth = 1000, worldHeight = 100000; 
-        let cameraY = 0, grapplePoints = [], bots = [], healthOrbs = [];
-        let lavaY = worldHeight + 1000, lavaSpeed = 0.6, endgameTriggered = false;
+        let isStarted = false, isGameOver = false;
+
+        const worldWidth = 1000, worldHeight = 100000;
+        let cameraY = 0, grapplePoints = [], bots = [];
+        let lavaY = worldHeight + 2000, lavaSpeed = 0.8, endgameTriggered = false;
+        let gravityDir = 1;
 
         let p = {
             x: 500, y: worldHeight - 150, vx: 0, vy: 0, size: 18, hp: 100,
-            jumpForce: 17, wallHops: 5, color: "#00ff00", name: "Player",
-            hook: { active: false, target: null, length: 0 }
+            jumpForce: 17, name: "Player"
         };
         window.gameReds = 10;
-        let keys = {}, mouseX = 0, mouseY = 0, isMouseDown = false;
+        let keys = {};
 
-        // --- NETWORKING ---
-        window.hostRoom = () => {
-            p.name = document.getElementById('pName').value;
-            roomCode = Math.floor(100000 + Math.random() * 900000).toString();
-            peer = new Peer('grapple-' + roomCode);
-            isHost = true;
-            setupPeer();
-        };
-
-        window.joinRoom = () => {
-            roomCode = document.getElementById('joinCode').value;
-            p.name = document.getElementById('pName').value;
-            peer = new Peer();
-            setupPeer();
-        };
-
+        // --- MENU ACTIONS ---
         window.startSolo = () => {
-            p.name = document.getElementById('pName').value;
             soloMode = true;
             realStart();
         };
 
-        function setupPeer() {
+        window.hostRoom = () => {
+            let code = Math.floor(100000 + Math.random() * 900000).toString();
+            peer = new Peer('grapple-' + code);
+            isHost = true;
+            document.getElementById('room-display').innerText = "CODE: " + code;
+            setupPeer();
+        };
+
+        window.joinRoom = () => {
+            let code = document.getElementById('joinCode').value;
+            peer = new Peer();
+            setupPeer(code);
+        };
+
+        function setupPeer(code) {
             peer.on('open', id => {
                 myId = id;
                 document.getElementById('main-menu').style.display = 'none';
                 document.getElementById('lobby-menu').style.display = 'block';
-                document.getElementById('room-display').innerText = "CODE: " + roomCode;
                 if (isHost) document.getElementById('start-btn').style.display = 'block';
+                else {
+                    const c = peer.connect('grapple-' + code);
+                    c.on('data', data => { if(data.type==='start') realStart(); });
+                }
             });
             peer.on('connection', c => {
                 connections[c.peer] = c;
-                c.on('open', () => { updateLobbyUI(); });
-                c.on('data', data => {
-                    if (data.type === 'kick') location.reload();
-                    if (data.type === 'start') realStart();
-                    if (data.type === 'sync') players[data.id] = data;
-                });
+                c.on('data', data => { if(data.type==='sync') players[data.id] = data; });
             });
         }
-
-        function updateLobbyUI() {
-            const list = document.getElementById('lobby-list');
-            list.innerHTML = "";
-            Object.keys(connections).forEach(id => {
-                list.innerHTML += `<div class="player-item">Connected Player <span class="kick-btn" onclick="kickPlayer('${id}')">${isHost ? '[KICK]' : ''}</span></div>`;
-            });
-        }
-
-        window.kickPlayer = (id) => { if(isHost) connections[id].send({type:'kick'}); };
 
         window.startGame = () => {
-            Object.values(connections).forEach(c => c.send({type:'start'}));
+            Object.values(connections).forEach(c => c.send({type: 'start'}));
             realStart();
         };
 
         function realStart() {
             isStarted = true;
+            p.name = document.getElementById('pName').value || "Player";
             document.getElementById('ui-layer').style.display = 'none';
             document.getElementById('hud').style.display = 'block';
             initWorld();
-            // RULE: Bots despawn after 2 minutes
+            // Bots despawn after 2 minutes
             setTimeout(() => { bots = []; }, 120000);
         }
 
         function initWorld() {
             canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-            for (let i = 0; i < 1500; i++) {
-                grapplePoints.push({ x: 100 + Math.random()*800, y: worldHeight - 400 - (i*75), radius: 25 });
+            for (let i = 0; i < 2000; i++) {
+                grapplePoints.push({ x: Math.random() * worldWidth, y: worldHeight - 400 - (i * 60), radius: 20 });
             }
-            for (let i = 0; i < 20; i++) {
-                bots.push({ x: Math.random()*800, y: worldHeight - 1000 - (i*1500), vx: 0, vy: 0, size: 18, color: "orange", reds: 10 });
+            for (let i = 0; i < 30; i++) {
+                bots.push({ x: Math.random() * worldWidth, y: worldHeight - (i * 2000), size: 18, reds: 10 });
             }
         }
 
-        // --- CORE LOOP ---
         function update() {
             if (!isStarted || isGameOver) return;
             let curH = (worldHeight - p.y) / 10;
 
-            if (p.hp < 1) { p.y = worldHeight - 150; p.vx = 0; p.vy = 0; p.hp = 100; }
-
             if (curH >= 7500 && !endgameTriggered) {
                 endgameTriggered = true;
                 document.getElementById('lava-warning').style.display = 'block';
-                setTimeout(() => document.getElementById('lava-warning').style.display='none', 5000);
+                setTimeout(() => document.getElementById('lava-warning').style.display='none', 4000);
             }
 
             if (endgameTriggered) {
-                lavaY -= lavaSpeed; lavaSpeed += 0.0005;
-                if (p.y > lavaY) p.hp -= 1.5;
+                lavaY -= lavaSpeed; lavaSpeed += 0.002;
+                if (p.y > lavaY) p.hp -= 2;
             }
 
             if (curH >= 10000) {
                 isGameOver = true;
+                gravityDir = -1;
                 document.body.classList.add('flipped');
                 document.getElementById('end-screen').style.display = 'flex';
             }
 
-            let gravity = (curH >= 223.5) ? 0 : 0.5;
+            let gravity = (curH >= 223.5) ? 0 : 0.5 * gravityDir;
             if (keys['KeyA']) p.vx -= 0.8; if (keys['KeyD']) p.vx += 0.8;
             if (keys['Space'] || keys['KeyW']) {
-                if (curH < 223.5) { if(p.vy >= 0) p.vy = -p.jumpForce; } 
-                else { p.vy -= 0.4; } // Zero-G Thruster
+                if (curH < 223.5) { if(Math.abs(p.vy) < 1) p.vy = -p.jumpForce * gravityDir; }
+                else { p.vy -= 0.5 * gravityDir; }
             }
 
             p.vy += gravity; p.vx *= 0.98; p.vy *= 0.99;
             p.x += p.vx; p.y += p.vy;
 
-            if (p.x < 18 || p.x > 982) { p.vx = 0; p.x = p.x < 18 ? 18 : 982; }
-            if (p.y > worldHeight - 18) { p.y = worldHeight - 18; p.vy = 0; }
+            if (p.x < 18 || p.x > worldWidth-18) { p.vx = 0; p.x = p.x < 18 ? 18 : worldWidth-18; }
+            if (p.y > worldHeight - 18 && gravityDir === 1) { p.y = worldHeight - 18; p.vy = 0; }
 
             bots.forEach(b => {
-                b.y += Math.sin(Date.now()/1000) * 2;
-                if (Math.hypot(p.x - b.x, p.y - b.y) < p.size + b.size && b.reds > 0) {
-                    window.gameReds += b.reds; b.reds = 0; b.color = "#555";
+                if (Math.hypot(p.x - b.x, p.y - b.y) < 40 && b.reds > 0) {
+                    window.gameReds += b.reds; b.reds = 0;
                 }
             });
 
             grapplePoints.forEach(gp => {
-                if (Math.hypot(p.x - gp.x, p.y - gp.y) < p.size + gp.radius) {
+                if (Math.hypot(p.x - gp.x, p.y - gp.y) < 40) {
                     let ang = Math.atan2(p.y - gp.y, p.x - gp.x);
-                    p.x = gp.x + Math.cos(ang) * (p.size + gp.radius);
-                    p.y = gp.y + Math.sin(ang) * (p.size + gp.radius);
-                    p.vx *= 0.5; p.vy *= 0.5;
+                    p.x = gp.x + Math.cos(ang)*40; p.y = gp.y + Math.sin(ang)*40;
+                    p.vx *= 0.8; p.vy *= 0.8;
                 }
             });
 
             cameraY = p.y - window.innerHeight / 2;
 
             if (!soloMode && myId) {
-                let data = { type: 'sync', id: myId, x: p.x, y: p.y, name: p.name, h: Math.floor(curH) };
+                const data = { type:'sync', id:myId, x:p.x, y:p.y, name:p.name, h:Math.floor(curH) };
                 Object.values(connections).forEach(c => c.send(data));
                 players[myId] = data;
             }
@@ -226,13 +206,10 @@
         }
 
         function draw() {
-            ctx.fillStyle = (worldHeight - p.y) / 10 > 7500 ? "#300" : "#000";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = endgameTriggered ? "#300" : "#000";
+            ctx.fillRect(0,0,canvas.width,canvas.height);
             ctx.save();
             ctx.translate(-(p.x - canvas.width/2), -cameraY);
-            
-            ctx.fillStyle = "#111";
-            ctx.fillRect(-1000, 0, 1000, worldHeight); ctx.fillRect(worldWidth, 0, 1000, worldHeight);
 
             grapplePoints.forEach(gp => {
                 ctx.fillStyle = "#ff5500";
@@ -240,7 +217,7 @@
             });
 
             bots.forEach(b => {
-                ctx.fillStyle = b.color;
+                ctx.fillStyle = b.reds > 0 ? "orange" : "#444";
                 ctx.beginPath(); ctx.arc(b.x, b.y, b.size, 0, 7); ctx.fill();
             });
 
