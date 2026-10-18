@@ -1,918 +1,1157 @@
+
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>grapple</title>
+<title>GRAPPLE</title>
+<script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
 <style>
-* {
-  box-sizing: border-box;
+:root {
+  color-scheme: dark;
+  --bg: #10131b;
+  --panel: #1a2030;
+  --panel2: #252e43;
+  --accent: #56f59a;
+  --text: #f4f7ff;
+  --muted: #aab5ca;
+  --border: #39445b;
+  --danger: #ff5c70;
 }
-
+* { box-sizing: border-box; }
 html, body {
   margin: 0;
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background: #05070c;
-  color: #aaa;
-  font-family: Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Arial, Helvetica, sans-serif;
+  touch-action: none;
 }
-
-canvas {
+button, input, select { font: inherit; }
+button {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 11px 14px;
+  color: var(--text);
+  background: var(--panel2);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+button:hover { filter: brightness(1.16); }
+button:active { transform: scale(.98); }
+button:disabled { opacity: .45; cursor: not-allowed; }
+input, select {
+  width: 100%;
+  min-width: 0;
+  padding: 11px;
+  color: var(--text);
+  background: #101521;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  outline: none;
+}
+input:focus, select:focus { border-color: var(--accent); }
+label {
   display: block;
-  width: 100vw;
-  height: 100vh;
+  margin: 0 0 7px;
+  color: var(--muted);
+  font-size: 13px;
 }
-
-#menu {
+#game {
   position: fixed;
   inset: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #080808;
-}
-
-#menuBox {
-  width: min(340px, calc(100vw - 30px));
-  padding: 24px;
-  text-align: center;
-}
-
-h1 {
-  margin: 0 0 8px;
-  font-size: 42px;
-  font-weight: normal;
-  color: #ccc;
-}
-
-p {
-  color: #888;
-}
-
-input, select, button {
-  font: inherit;
-  background: #191919;
-  color: #bbb;
-  border: 1px solid #444;
-  border-radius: 2px;
-}
-
-input {
-  padding: 9px;
-  margin: 12px 0 8px;
-}
-
-button {
-  padding: 6px 9px;
-  cursor: pointer;
-}
-
-button:disabled {
-  opacity: .5;
-  cursor: default;
-}
-
-#name {
   width: 100%;
+  height: 100%;
+  display: block;
 }
-
-#play {
-  width: 100%;
-  margin-top: 5px;
-  padding: 9px;
-  background: #333;
-  color: #ddd;
-}
-
 #hud {
-  display: none;
   position: fixed;
-  left: 14px;
-  top: 14px;
-  z-index: 2;
-  pointer-events: none;
-  color: #bbb;
-  line-height: 1.5;
-  font-size: 14px;
-}
-
-#leaderboard {
-  position: fixed;
-  top: 14px;
-  right: 14px;
-  z-index: 3;
-  width: 180px;
-  pointer-events: none;
-}
-
-.panelTitle {
-  font-weight: normal;
-  color: #999;
-  margin-bottom: 5px;
-}
-
-.leaderRow {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 12px;
-  padding: 2px 0;
-  color: #aaa;
-}
-
-.leaderRow span:first-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-#shop {
-  display: none;
-  position: fixed;
-  right: 14px;
-  top: 155px;
-  z-index: 3;
-  width: 180px;
-  color: #aaa;
-  font-size: 12px;
-  line-height: 1.9;
-}
-
-#shop button {
-  font-size: 12px;
-}
-
-#customize {
-  display: none;
-  position: fixed;
-  right: 14px;
-  top: 225px;
-  z-index: 3;
-  width: 180px;
-  color: #aaa;
-  font-size: 12px;
-  line-height: 2.2;
-}
-
-#customize label {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-#playerColor {
-  width: 34px;
-  height: 23px;
-  padding: 0;
-  margin: 0;
-}
-
-#playerPattern {
-  max-width: 125px;
-  padding: 3px;
-  font-size: 12px;
-}
-
-#restart {
-  display: none;
-  position: fixed;
-  right: 14px;
-  bottom: 14px;
+  top: 12px;
+  left: 12px;
   z-index: 5;
-  color: #bbb;
-  padding: 8px 12px;
+  width: min(245px, calc(100vw - 24px));
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #111722eF;
+  pointer-events: none;
 }
-
+#logo {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+.stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 3px 0;
+  font-size: 13px;
+}
+.stat span:first-child { color: var(--muted); }
+.stat span:last-child { font-weight: bold; text-align: right; }
+#connection { color: #ffd166; font-size: 11px; margin-top: 7px; }
+#rightSide {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  z-index: 5;
+  width: min(225px, calc(100vw - 270px));
+  min-width: 135px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.panel {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #111722ed;
+  padding: 10px;
+  min-width: 0;
+}
+.panelTitle {
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 1.3px;
+  color: var(--accent);
+  margin-bottom: 8px;
+}
+#leaderboard {
+  max-height: min(34vh, 270px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+.leaderRow {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  padding: 5px 2px;
+  border-bottom: 1px solid #ffffff12;
+  font-size: 12px;
+}
+.leaderRow:last-child { border-bottom: 0; }
+.leaderName {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.leaderHeight { color: var(--accent); font-weight: bold; }
+#menuButtons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.menuButton {
+  width: 100%;
+  min-height: 43px;
+  font-weight: 900;
+  letter-spacing: 1px;
+  background: #202a3c;
+}
+#shopButton { border-color: #e4ad44; }
+#customizeButton { border-color: #8c83ff; }
+#controlsHint {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 4;
+  max-width: min(360px, calc(100vw - 24px));
+  padding: 9px 12px;
+  color: #d1d9e8;
+  background: #111722d9;
+  border: 1px solid #39445b99;
+  border-radius: 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  pointer-events: none;
+}
 #toast {
   position: fixed;
   left: 50%;
-  top: 20px;
+  top: 14px;
+  z-index: 30;
+  max-width: calc(100vw - 30px);
   transform: translateX(-50%);
-  z-index: 20;
-  padding: 7px 10px;
-  display: none;
-  background: #111;
-  color: #ccc;
+  padding: 11px 16px;
+  background: #202a3c;
+  border: 1px solid var(--accent);
+  border-radius: 10px;
+  text-align: center;
   font-size: 13px;
-}
-
-#help {
-  position: fixed;
-  left: 14px;
-  bottom: 14px;
-  z-index: 2;
-  color: #888;
-  font-size: 12px;
+  box-shadow: 0 8px 30px #0006;
+  display: none;
   pointer-events: none;
-  line-height: 1.5;
 }
-
+#modalBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: #05070bcc;
+}
+#modalBackdrop.open { display: flex; }
+.modal {
+  display: none;
+  width: min(440px, 100%);
+  max-height: min(720px, calc(100dvh - 32px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: #171e2c;
+  box-shadow: 0 20px 70px #0009;
+}
+.modal.active { display: block; }
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.modalTitle {
+  font-size: 21px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+.closeButton {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  flex-shrink: 0;
+  font-size: 22px;
+}
+.field { margin-bottom: 17px; }
+.primary {
+  width: 100%;
+  color: #08150e;
+  background: var(--accent);
+  border-color: var(--accent);
+  font-weight: 900;
+}
+.secondary { width: 100%; }
+#shopBalance {
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 10px;
+  background: #101521;
+  font-weight: bold;
+}
+#upgradeInfo {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 12px 0;
+}
+.colorRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+#playerColor {
+  width: 60px;
+  height: 43px;
+  padding: 3px;
+  cursor: pointer;
+}
+#colorText { color: var(--muted); font-size: 13px; }
+#nameMessage {
+  min-height: 16px;
+  margin-top: 7px;
+  color: var(--muted);
+  font-size: 12px;
+}
+#mobileControls {
+  display: none;
+  position: fixed;
+  inset: auto 12px 75px 12px;
+  z-index: 6;
+  justify-content: space-between;
+  align-items: end;
+  pointer-events: none;
+}
+.mobileGroup { display: flex; gap: 8px; pointer-events: auto; }
+.mobileButton {
+  width: 54px;
+  height: 54px;
+  padding: 0;
+  border-radius: 50%;
+  background: #111722d9;
+  font-size: 20px;
+  font-weight: bold;
+  user-select: none;
+  -webkit-user-select: none;
+}
+#jumpButton { border-color: var(--accent); }
+#grappleButton { width: 66px; height: 66px; border-color: #ffb84d; }
 @media (max-width: 600px) {
-  #leaderboard {
-    width: 145px;
-    right: 8px;
+  #hud { top: 8px; left: 8px; width: 172px; padding: 9px; }
+  #logo { font-size: 16px; margin-bottom: 5px; }
+  .stat { font-size: 11px; }
+  #rightSide {
     top: 8px;
-  }
-
-  #shop {
     right: 8px;
-    top: 150px;
-    width: 145px;
+    width: 128px;
+    min-width: 0;
+    gap: 6px;
   }
-
-  #customize {
-    right: 8px;
-    top: 215px;
-    width: 145px;
-  }
-
-  #hud {
-    left: 8px;
-    top: 8px;
-    font-size: 13px;
-  }
-
-  #help {
-    left: 8px;
-    bottom: 8px;
-    max-width: 145px;
-  }
+  #leaderboard { max-height: 24vh; padding: 8px; }
+  .panelTitle { font-size: 10px; margin-bottom: 5px; }
+  .leaderRow { grid-template-columns: 15px minmax(0,1fr) auto; gap: 4px; font-size: 10px; }
+  .menuButton { padding: 9px 6px; min-height: 38px; font-size: 11px; }
+  #controlsHint { display: none; }
+  #mobileControls { display: flex; }
+  #connection { font-size: 10px; }
+}
+@media (max-width: 360px) {
+  #hud { width: 145px; }
+  #rightSide { width: 112px; }
+  .stat { font-size: 10px; }
 }
 </style>
 </head>
-
 <body>
 <canvas id="game"></canvas>
 
-<div id="menu">
-  <div id="menuBox">
-    <h1>grapple</h1>
-    <p>Climb up. Reach the Moon.</p>
-    <input id="name" maxlength="16" placeholder="Your name" value="Player" autocomplete="off">
-    <button id="play">PLAY</button>
-    <p id="status" style="font-size:12px;margin-bottom:0">Connecting to server...</p>
+<div id="hud">
+  <div id="logo">GRAPPLE</div>
+  <div class="stat"><span>Height</span><span id="height">0 m</span></div>
+  <div class="stat"><span>Reds</span><span id="reds">0</span></div>
+  <div class="stat"><span>Wall hops</span><span id="hops">5/5</span></div>
+  <div class="stat"><span>Grapple</span><span id="grappleStatus">Ready</span></div>
+  <div id="connection">Connecting to server...</div>
+</div>
+
+<div id="rightSide">
+  <div id="leaderboard" class="panel">
+    <div class="panelTitle">LEADERBOARD</div>
+    <div id="leaderRows">Waiting for players...</div>
+  </div>
+  <div id="menuButtons">
+    <button id="shopButton" class="menuButton">SHOP</button>
+    <button id="customizeButton" class="menuButton">CUSTOMIZE</button>
   </div>
 </div>
 
-<div id="hud">
-  <div id="height">HEIGHT: 0m</div>
-  <div id="reds">REDS: 10</div>
-  <div id="hops">WALL HOPS: 5/5</div>
+<div id="controlsHint">
+  <b>MOVE:</b> A / D or ← / → &nbsp; <b>JUMP:</b> SPACE / W / ↑<br>
+  <b>GRAPPLE:</b> Hold left mouse button and aim with your mouse<br>
+  <b>RELEASE:</b> Let go of the mouse button
 </div>
 
-<div id="leaderboard">
-  <div class="panelTitle">LEADERBOARD</div>
-  <div id="leaderRows">Waiting for players...</div>
+<div id="mobileControls">
+  <div class="mobileGroup">
+    <button class="mobileButton" id="leftButton" aria-label="Move left">◀</button>
+    <button class="mobileButton" id="rightButton" aria-label="Move right">▶</button>
+  </div>
+  <div class="mobileGroup">
+    <button class="mobileButton" id="jumpButton" aria-label="Jump">↑</button>
+    <button class="mobileButton" id="grappleButton" aria-label="Grapple">⛓</button>
+  </div>
 </div>
 
-<div id="shop">
-  <div>SHOP</div>
-  <div id="grappleLength">GRAPPLE LENGTH: 1x</div>
-  <div id="shopReds">10 Reds</div>
-  <button id="grappleUpgrade">Upgrade Grapple</button>
-</div>
-
-<div id="customize">
-  <div>YOUR CIRCLE</div>
-  <label>
-    Color
-    <input id="playerColor" type="color" value="#00ff66">
-  </label>
-  <label>
-    Pattern
-    <select id="playerPattern">
-      <option value="Solid">Solid</option>
-      <option value="Horizontal">Lines</option>
-      <option value="Diagonal">Diagonal</option>
-      <option value="Hexagon">Hexagon</option>
-    </select>
-  </label>
-</div>
-
-<div id="help">
-  A / D or ← / → to move<br>
-  W / Space to jump<br>
-  Hold mouse to grapple
-</div>
-
-<button id="restart">RESTART</button>
 <div id="toast"></div>
 
-<script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+<div id="modalBackdrop">
+  <section id="shopModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="shopTitle">
+    <div class="modalHeader">
+      <div class="modalTitle" id="shopTitle">GRAPPLE SHOP</div>
+      <button class="closeButton" data-close aria-label="Close shop">×</button>
+    </div>
+    <div id="shopBalance">Reds: 0</div>
+    <div class="field">
+      <label>GRAPPLE UPGRADE</label>
+      <div id="upgradeInfo">Loading upgrade...</div>
+      <button id="buyUpgrade" class="primary">BUY UPGRADE</button>
+    </div>
+    <button class="secondary" data-close>BACK TO GAME</button>
+  </section>
+
+  <section id="customizeModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="customizeTitle">
+    <div class="modalHeader">
+      <div class="modalTitle" id="customizeTitle">CUSTOMIZE</div>
+      <button class="closeButton" data-close aria-label="Close customization">×</button>
+    </div>
+    <div class="field">
+      <label for="playerName">PLAYER NAME</label>
+      <input id="playerName" type="text" maxlength="18" autocomplete="off" placeholder="Enter your name">
+      <div id="nameMessage">Your name is shown to other players.</div>
+      <button id="saveName" class="primary" style="margin-top:10px">SAVE NAME</button>
+    </div>
+    <div class="field">
+      <label for="playerColor">PLAYER COLOR</label>
+      <div class="colorRow">
+        <input id="playerColor" type="color" value="#00ff66">
+        <span id="colorText">#00FF66</span>
+      </div>
+    </div>
+    <div class="field">
+      <label for="playerPattern">PLAYER PATTERN</label>
+      <select id="playerPattern">
+        <option value="Solid">Solid</option>
+        <option value="Horizontal">Horizontal stripes</option>
+        <option value="Diagonal">Diagonal stripes</option>
+        <option value="Hexagon">Hexagon pattern</option>
+      </select>
+    </div>
+    <button id="saveAppearance" class="primary">SAVE APPEARANCE</button>
+    <button class="secondary" data-close style="margin-top:10px">BACK TO GAME</button>
+  </section>
+</div>
+
 <script>
 (() => {
-  const canvas = document.getElementById("game");
-  const ctx = canvas.getContext("2d");
+  "use strict";
 
-  const menu = document.getElementById("menu");
-  const status = document.getElementById("status");
-  const hud = document.getElementById("hud");
-  const shop = document.getElementById("shop");
-  const restartButton = document.getElementById("restart");
-
-  const socket = io("https://grapple-qqcp.onrender.com", {
-    transports: ["websocket", "polling"]
+  const SERVER_URL = "https://grapple-qqcp.onrender.com";
+  const socket = io(SERVER_URL, {
+    transports: ["websocket", "polling"],
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000
   });
 
+  const $ = id => document.getElementById(id);
+  const canvas = $("game");
+  const ctx = canvas.getContext("2d");
+
+  let screenWidth = window.innerWidth;
+  let screenHeight = window.innerHeight;
+  let dpr = Math.min(window.devicePixelRatio || 1, 2);
   let myId = null;
-  let joined = false;
-
-  let world = {
-    width: 1000,
-    height: 30000,
-    moon: {
-      x: 500,
-      y: 1500,
-      radius: 500
-    }
-  };
-
-  let grapplePoints = [];
-  let players = [];
-  let bots = [];
-
-  let mouse = {
-    x: 0,
-    y: 0,
-    down: false
-  };
-
-  let keys = {};
-  let localPlayer = null;
-
-  let cameraX = 0;
+  let gameState = null;
+  let myPlayer = null;
+  let cameraX = 500;
   let cameraY = 0;
-
-  let snapshotTime = 0;
-  let toastTimer = null;
-
-  let previousPositions = new Map();
+  let targetCameraY = 0;
+  let currentMenu = null;
+  let toastTimeout = null;
   let lastLeaderboardSignature = "";
   let lastHudSignature = "";
+  let lastInputSent = 0;
+  let mouseX = screenWidth / 2;
+  let mouseY = screenHeight / 2;
+  let mouseDown = false;
+  let jumpQueued = false;
+  let leftPressed = false;
+  let rightPressed = false;
+  let mobileGrapple = false;
+  let joined = false;
+  let lastAppearance = { color: "#00ff66", pattern: "Solid" };
 
-  const colorInput = document.getElementById("playerColor");
-  const patternInput = document.getElementById("playerPattern");
-  const upgradeButton = document.getElementById("grappleUpgrade");
+  const keys = new Set();
 
-  function resize() {
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-
-    canvas.width = Math.floor(innerWidth * dpr);
-    canvas.height = Math.floor(innerHeight * dpr);
-
+  function resizeCanvas() {
+    screenWidth = window.innerWidth;
+    screenHeight = window.innerHeight;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(screenWidth * dpr);
+    canvas.height = Math.round(screenHeight * dpr);
+    canvas.style.width = screenWidth + "px";
+    canvas.style.height = screenHeight + "px";
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
-  addEventListener("resize", resize);
-  resize();
+  window.addEventListener("resize", resizeCanvas);
+  resizeCanvas();
+
+  function showToast(message, duration = 2400) {
+    const toast = $("toast");
+    toast.textContent = String(message || "");
+    toast.style.display = "block";
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => {
+      toast.style.display = "none";
+    }, duration);
+  }
+
+  function setConnection(message, color = "#ffd166") {
+    $("connection").textContent = message;
+    $("connection").style.color = color;
+  }
+
+  function openMenu(name) {
+    currentMenu = name;
+    $("modalBackdrop").classList.add("open");
+    $("shopModal").classList.toggle("active", name === "shop");
+    $("customizeModal").classList.toggle("active", name === "customize");
+    mouseDown = false;
+    mobileGrapple = false;
+    if (name === "customize") {
+      if (myPlayer) {
+        $("playerName").value = myPlayer.name || "";
+        const color = myPlayer.color || "#00ff66";
+        $("playerColor").value = normalizeColor(color);
+        $("colorText").textContent = $("playerColor").value.toUpperCase();
+        $("playerPattern").value = myPlayer.pattern || "Solid";
+      }
+      setTimeout(() => $("playerName").focus(), 50);
+    }
+    updateShop();
+  }
+
+  function closeMenu() {
+    currentMenu = null;
+    $("modalBackdrop").classList.remove("open");
+    $("shopModal").classList.remove("active");
+    $("customizeModal").classList.remove("active");
+    mouseDown = false;
+    mobileGrapple = false;
+  }
+
+  $("shopButton").addEventListener("click", () => openMenu("shop"));
+  $("customizeButton").addEventListener("click", () => openMenu("customize"));
+
+  document.querySelectorAll("[data-close]").forEach(button => {
+    button.addEventListener("click", closeMenu);
+  });
+
+  $("modalBackdrop").addEventListener("click", event => {
+    if (event.target === $("modalBackdrop")) closeMenu();
+  });
+
+  window.addEventListener("keydown", event => {
+    if (event.key === "Escape") {
+      closeMenu();
+      return;
+    }
+
+    if (currentMenu) {
+      if (event.key === "Enter" && event.target === $("playerName")) {
+        saveName();
+      }
+      return;
+    }
+
+    const key = event.key.toLowerCase();
+    if (["arrowleft", "arrowright", "arrowup", " "].includes(key)) {
+      event.preventDefault();
+    }
+    keys.add(key);
+    if ([" ", "w", "arrowup"].includes(key) && !event.repeat) {
+      jumpQueued = true;
+    }
+  });
+
+  window.addEventListener("keyup", event => {
+    keys.delete(event.key.toLowerCase());
+  });
+
+  window.addEventListener("blur", () => {
+    keys.clear();
+    mouseDown = false;
+    jumpQueued = false;
+    leftPressed = false;
+    rightPressed = false;
+    mobileGrapple = false;
+  });
+
+  function normalizeColor(value) {
+    if (typeof value !== "string" || !/^#[0-9a-f]{6}$/i.test(value)) {
+      return "#00ff66";
+    }
+    return value;
+  }
+
+  function saveName() {
+    const name = $("playerName").value.trim().replace(/\s+/g, " ");
+    if (!name) {
+      $("nameMessage").textContent = "Please enter a name.";
+      $("nameMessage").style.color = "#ff8795";
+      return;
+    }
+    if (name.length > 18) {
+      $("nameMessage").textContent = "Your name must be 18 characters or fewer.";
+      $("nameMessage").style.color = "#ff8795";
+      return;
+    }
+    socket.emit("setName", name);
+    $("nameMessage").textContent = "Name sent to server.";
+    $("nameMessage").style.color = "#56f59a";
+    showToast("Saving name...");
+  }
+
+  $("saveName").addEventListener("click", saveName);
+
+  $("playerColor").addEventListener("input", () => {
+    $("colorText").textContent = $("playerColor").value.toUpperCase();
+  });
+
+  function saveAppearance() {
+    const color = normalizeColor($("playerColor").value);
+    const pattern = $("playerPattern").value;
+    lastAppearance = { color, pattern };
+    socket.emit("setAppearance", { color, pattern });
+    showToast("Saving appearance...");
+  }
+
+  $("saveAppearance").addEventListener("click", saveAppearance);
+
+  $("buyUpgrade").addEventListener("click", () => {
+    $("buyUpgrade").disabled = true;
+    socket.emit("buyGrappleUpgrade");
+    setTimeout(() => {
+      $("buyUpgrade").disabled = false;
+      updateShop();
+    }, 500);
+  });
+
+  function getPlayers() {
+    if (!gameState) return [];
+    if (Array.isArray(gameState.players)) return gameState.players;
+    if (gameState.players && typeof gameState.players === "object") {
+      return Object.values(gameState.players);
+    }
+    return [];
+  }
+
+  function findMyPlayer() {
+    const players = getPlayers();
+    return players.find(player =>
+      player.id === myId ||
+      player.socketId === myId ||
+      player.playerId === myId
+    ) || null;
+  }
+
+  function getHeight(player) {
+    if (!player) return 0;
+    if (typeof player.height === "number") return Math.max(0, Math.floor(player.height));
+    if (typeof player.y === "number") return Math.max(0, Math.floor(1500 - player.y));
+    return 0;
+  }
+
+  function getReds(player) {
+    if (!player) return 0;
+    return Number(player.reds ?? player.Reds ?? 0) || 0;
+  }
+
+  function updateHud() {
+    if (!myPlayer) return;
+    const height = getHeight(myPlayer);
+    const reds = getReds(myPlayer);
+    const hops = Number(myPlayer.wallHops ?? 5);
+    const maxHops = Number(myPlayer.maxWallHops ?? 5);
+    const signature = [height, reds, hops, maxHops, myPlayer.grappleMultiplier].join("|");
+    if (signature === lastHudSignature) return;
+    lastHudSignature = signature;
+    $("height").textContent = height.toLocaleString() + " m";
+    $("reds").textContent = reds.toLocaleString();
+    $("hops").textContent = hops + "/" + maxHops;
+    $("grappleStatus").textContent =
+      (Number(myPlayer.grappleMultiplier) || 1).toFixed(2).replace(/0+$/, "").replace(/\.$/, "") + "x";
+    updateShop();
+  }
+
+  function updateShop() {
+    const player = myPlayer;
+    const reds = getReds(player);
+    const multiplier = Number(player && player.grappleMultiplier) || 1;
+    const cost = Number(player && player.grappleUpgradeCost);
+    $("shopBalance").textContent = "Reds: " + reds.toLocaleString();
+    $("upgradeInfo").textContent =
+      "Current grapple power: " + multiplier.toFixed(2).replace(/0+$/, "").replace(/\.$/, "") +
+      "x\n" +
+      (Number.isFinite(cost) && cost > 0
+        ? "Next upgrade costs " + cost.toLocaleString() + " Reds."
+        : "Upgrade price will appear when the server responds.");
+    $("upgradeInfo").style.whiteSpace = "pre-line";
+    $("buyUpgrade").disabled = !player || !Number.isFinite(cost) || cost <= 0 || reds < cost;
+    $("buyUpgrade").textContent =
+      Number.isFinite(cost) && cost > 0
+        ? "BUY UPGRADE — " + cost.toLocaleString() + " REDS"
+        : "WAITING FOR SERVER";
+  }
+
+  function updateLeaderboard() {
+    const players = getPlayers().slice().sort((a, b) => getHeight(b) - getHeight(a));
+    const signature = players.map((p, index) =>
+      [index, p.id || p.socketId || p.name, p.name, getHeight(p), p.color].join(":")
+    ).join("|");
+    if (signature === lastLeaderboardSignature) return;
+    lastLeaderboardSignature = signature;
+
+    const container = $("leaderRows");
+    container.replaceChildren();
+
+    if (!players.length) {
+      container.textContent = "Waiting for players...";
+      return;
+    }
+
+    players.slice(0, 30).forEach((player, index) => {
+      const row = document.createElement("div");
+      row.className = "leaderRow";
+
+      const rank = document.createElement("span");
+      rank.textContent = String(index + 1) + ".";
+
+      const name = document.createElement("span");
+      name.className = "leaderName";
+      name.textContent = player.name || "Player";
+      name.style.color = normalizeColor(player.color || "#ffffff");
+
+      const height = document.createElement("span");
+      height.className = "leaderHeight";
+      height.textContent = getHeight(player).toLocaleString() + "m";
+
+      row.append(rank, name, height);
+      container.appendChild(row);
+    });
+  }
 
   socket.on("connect", () => {
-    status.textContent = "Ready to play";
-    document.getElementById("play").disabled = false;
+    setConnection("Connected", "#56f59a");
+    if (!joined) {
+      joined = true;
+      socket.emit("join", { name: "Grappler" });
+    }
   });
 
   socket.on("disconnect", () => {
-    status.textContent = "Disconnected. Reconnecting...";
-
-    if (!joined) {
-      document.getElementById("play").disabled = true;
-    }
+    setConnection("Disconnected — reconnecting...", "#ff8795");
   });
 
   socket.on("connect_error", () => {
-    if (!joined) {
-      status.textContent = "Connecting to server...";
-    }
+    setConnection("Server waking up or reconnecting...", "#ffd166");
   });
 
   socket.on("init", data => {
-    myId = data.id;
-    world = data.world;
-    grapplePoints = data.grapplePoints;
-    players = data.players;
-    bots = data.bots;
-
-    previousPositions = new Map(
-      players.map(p => [
-        p.id,
-        { x: p.x, y: p.y }
-      ])
-    );
-
-    joined = true;
-
-    menu.style.display = "none";
-    hud.style.display = "block";
-    shop.style.display = "block";
-    document.getElementById("customize").style.display = "block";
-
-    snapshotTime = performance.now();
-
-    updateAppearance();
+    if (!data) return;
+    if (data.id) myId = data.id;
+    else if (data.playerId) myId = data.playerId;
+    if (data.state) gameState = data.state;
+    else if (data.players) gameState = data;
+    else gameState = data;
+    refreshState();
   });
 
-  socket.on("playerJoined", p => {
-    if (!players.some(player => player.id === p.id)) {
-      players.push(p);
+  socket.on("state", data => {
+    if (!data) return;
+    gameState = data;
+    refreshState();
+  });
+
+  socket.on("playerJoined", () => {
+    lastLeaderboardSignature = "";
+  });
+
+  socket.on("playerLeft", () => {
+    lastLeaderboardSignature = "";
+  });
+
+  socket.on("botTaken", data => {
+    if (data && data.message) showToast(data.message);
+  });
+
+  socket.on("notice", data => {
+    const message = typeof data === "string" ? data : data && (data.message || data.text);
+    if (message) showToast(message);
+  });
+
+  function refreshState() {
+    myPlayer = findMyPlayer();
+    if (myPlayer) {
+      if (myPlayer.color || myPlayer.pattern) {
+        lastAppearance = {
+          color: normalizeColor(myPlayer.color || lastAppearance.color),
+          pattern: myPlayer.pattern || lastAppearance.pattern
+        };
+      }
+      setConnection("Connected", "#56f59a");
     }
-  });
-
-  socket.on("playerLeft", id => {
-    players = players.filter(p => p.id !== id);
-    previousPositions.delete(id);
-  });
-
-  socket.on("state", state => {
-    const now = performance.now();
-
-    previousPositions = new Map(
-      players.map(p => [
-        p.id,
-        { x: p.x, y: p.y }
-      ])
-    );
-
-    players = state.players;
-    bots = state.bots;
-    world = state.world;
-
-    snapshotTime = now;
-  });
-
-  socket.on("botTaken", id => {
-    bots = bots.filter(bot => bot.id !== id);
-  });
-
-  socket.on("notice", message => {
-    showToast(message);
-  });
-
-  document.getElementById("play").addEventListener("click", () => {
-    if (!socket.connected) {
-      status.textContent = "Server not connected.";
-      return;
-    }
-
-    document.getElementById("play").disabled = true;
-
-    socket.emit("join", {
-      name: document.getElementById("name").value || "Player"
-    });
-  });
-
-  function updateAppearance() {
-    if (!joined) {
-      return;
-    }
-
-    socket.emit("setAppearance", {
-      color: colorInput.value,
-      pattern: patternInput.value
-    });
+    updateHud();
+    updateLeaderboard();
   }
 
-  colorInput.addEventListener("input", updateAppearance);
-  patternInput.addEventListener("change", updateAppearance);
-
-  upgradeButton.addEventListener("click", () => {
-    if (joined) {
-      socket.emit("buyGrappleUpgrade");
+  function getWorldSize() {
+    if (gameState && gameState.world) {
+      return {
+        width: Number(gameState.world.width) || 1000,
+        height: Number(gameState.world.height) || 30000
+      };
     }
-  });
-
-  function showToast(message) {
-    const toast = document.getElementById("toast");
-
-    toast.textContent = message;
-    toast.style.display = "block";
-
-    clearTimeout(toastTimer);
-
-    toastTimer = setTimeout(() => {
-      toast.style.display = "none";
-    }, 1800);
+    return { width: 1000, height: 30000 };
   }
 
-  function getMe() {
-    return players.find(p => p.id === myId) || null;
+  function getPlayerX(player) {
+    return Number(player && (player.x ?? (player.position && player.position.x))) || 0;
   }
 
-  function sendInput() {
-    if (!joined || !localPlayer) {
-      return;
-    }
-
-    socket.emit("input", {
-      left: !!(keys.ArrowLeft || keys.KeyA),
-      right: !!(keys.ArrowRight || keys.KeyD),
-      jump: !!(keys.Space || keys.KeyW || keys.ArrowUp),
-      mouseDown: mouse.down,
-      aimX: mouse.x + cameraX,
-      aimY: mouse.y + cameraY
-    });
+  function getPlayerY(player) {
+    return Number(player && (player.y ?? (player.position && player.position.y))) || 0;
   }
 
-  addEventListener("keydown", e => {
-    if (
-      ["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]
-        .includes(e.code)
-    ) {
-      e.preventDefault();
-    }
-
-    keys[e.code] = true;
-
-    if (e.code === "Escape") {
-      mouse.down = false;
-    }
-  }, { passive: false });
-
-  addEventListener("keyup", e => {
-    keys[e.code] = false;
-  });
-
-  canvas.addEventListener("mousemove", e => {
-    mouse.x = e.clientX;
-    mouse.y = e.clientY;
-  });
-
-  canvas.addEventListener("mousedown", e => {
-    if (e.button === 0) {
-      mouse.down = true;
-    }
-  });
-
-  addEventListener("mouseup", e => {
-    if (e.button === 0) {
-      mouse.down = false;
-    }
-  });
-
-  addEventListener("blur", () => {
-    keys = {};
-    mouse.down = false;
-  });
-
-  restartButton.addEventListener("click", () => {
-    if (joined) {
-      socket.emit("restart");
-    }
-  });
-
-  function drawCircle(x, y, r, color) {
-    ctx.fillStyle = color;
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
+  function worldToScreenX(x) {
+    return x - cameraX + screenWidth / 2;
   }
 
-  function drawPatternCircle(x, y, r, color, pattern) {
+  function worldToScreenY(y) {
+    return y - cameraY + screenHeight / 2;
+  }
+
+  function updateCamera() {
+    if (!myPlayer) return;
+    const px = getPlayerX(myPlayer);
+    const py = getPlayerY(myPlayer);
+    cameraX += (px - cameraX) * 0.12;
+    targetCameraY = py;
+    cameraY += (targetCameraY - cameraY) * 0.12;
+  }
+
+  function drawBackground() {
+    const gradient = ctx.createLinearGradient(0, 0, 0, screenHeight);
+    gradient.addColorStop(0, "#080d1a");
+    gradient.addColorStop(0.55, "#111b30");
+    gradient.addColorStop(1, "#171128");
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, screenWidth, screenHeight);
+
     ctx.save();
+    ctx.fillStyle = "#ffffff";
+    for (let i = 0; i < 95; i++) {
+      const x = ((i * 137.5) % screenWidth);
+      const y = ((i * 83.7 + cameraY * 0.08) % screenHeight + screenHeight) % screenHeight;
+      const radius = (i % 3 === 0) ? 1.5 : 0.8;
+      ctx.globalAlpha = 0.2 + ((i * 7) % 8) / 12;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
 
+  function drawMoon() {
+    const moon = gameState && gameState.moon;
+    const x = Number(moon && moon.x ?? 500);
+    const y = Number(moon && moon.y ?? 1500);
+    const radius = Number(moon && (moon.radius ?? moon.r) ?? 500);
+    if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(radius)) return;
+
+    const sx = worldToScreenX(x);
+    const sy = worldToScreenY(y);
+    const screenRadius = Math.max(0, radius);
+    if (sx + screenRadius < 0 || sx - screenRadius > screenWidth ||
+        sy + screenRadius < 0 || sy - screenRadius > screenHeight) return;
+
+    const gradient = ctx.createRadialGradient(
+      sx - screenRadius * .25, sy - screenRadius * .3, screenRadius * .05,
+      sx, sy, screenRadius
+    );
+    gradient.addColorStop(0, "#e9efff");
+    gradient.addColorStop(.7, "#9ca8c5");
+    gradient.addColorStop(1, "#525d78");
+    ctx.fillStyle = gradient;
     ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = color;
+    ctx.arc(sx, sy, screenRadius, 0, Math.PI * 2);
     ctx.fill();
+
+    ctx.save();
+    ctx.globalAlpha = .22;
+    ctx.fillStyle = "#39435b";
+    for (let i = 0; i < 15; i++) {
+      const cx = sx + Math.sin(i * 13.4) * screenRadius * .65;
+      const cy = sy + Math.cos(i * 7.1) * screenRadius * .65;
+      const cr = screenRadius * (.025 + (i % 4) * .012);
+      ctx.beginPath();
+      ctx.arc(cx, cy, cr, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function getArray(...possible) {
+    for (const value of possible) {
+      if (Array.isArray(value)) return value;
+      if (value && typeof value === "object") return Object.values(value);
+    }
+    return [];
+  }
+
+  function drawGrapplePoints() {
+    if (!gameState) return;
+    const points = getArray(
+      gameState.grapplePoints,
+      gameState.points,
+      gameState.grapples
+    );
+    ctx.save();
+    for (const point of points) {
+      const x = Number(point.x ?? (point.position && point.position.x));
+      const y = Number(point.y ?? (point.position && point.position.y));
+      if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+      const sx = worldToScreenX(x);
+      const sy = worldToScreenY(y);
+      if (sx < -40 || sx > screenWidth + 40 || sy < -40 || sy > screenHeight + 40) continue;
+
+      const radius = Number(point.radius) || 7;
+      ctx.fillStyle = "#ffb84d";
+      ctx.strokeStyle = "#fff0c2";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = "#fff0c2";
+      ctx.beginPath();
+      ctx.arc(sx, sy, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawReds() {
+    if (!gameState) return;
+    const orbs = getArray(gameState.redsOrbs, gameState.orbs, gameState.collectibles);
+    ctx.save();
+    for (const orb of orbs) {
+      if (orb.collected || orb.taken) continue;
+      const x = Number(orb.x ?? (orb.position && orb.position.x));
+      const y = Number(orb.y ?? (orb.position && orb.position.y));
+      if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+      const sx = worldToScreenX(x);
+      const sy = worldToScreenY(y);
+      if (sx < -25 || sx > screenWidth + 25 || sy < -25 || sy > screenHeight + 25) continue;
+
+      const radius = Number(orb.radius) || 8;
+      ctx.shadowBlur = 12;
+      ctx.shadowColor = "#ff405d";
+      ctx.fillStyle = "#ff405d";
+      ctx.beginPath();
+      ctx.arc(sx, sy, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = "#ffd4dc";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.arc(sx - radius * .25, sy - radius * .25, radius * .22, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawPlayerPattern(player, x, y, radius) {
+    const color = normalizeColor(player.color || "#00ff66");
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.clip();
+    ctx.fillStyle = color;
+    ctx.fillRect(x - radius, y - radius, radius * 2, radius * 2);
 
-    ctx.strokeStyle = "rgba(255,255,255,0.82)";
-    ctx.lineWidth = 1.5;
-
-    if (pattern === "Horizontal" || pattern === "Diagonal") {
-      for (let offset = -r * 2; offset <= r * 2; offset += 7) {
+    const pattern = player.pattern || "Solid";
+    if (pattern === "Horizontal") {
+      ctx.fillStyle = "#ffffff";
+      for (let yy = y - radius; yy < y + radius; yy += 8) {
+        ctx.fillRect(x - radius, yy, radius * 2, 3);
+      }
+    } else if (pattern === "Diagonal") {
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 3;
+      for (let xx = x - radius * 2; xx < x + radius * 2; xx += 9) {
         ctx.beginPath();
-
-        if (pattern === "Horizontal") {
-          ctx.moveTo(x - r, y + offset);
-          ctx.lineTo(x + r, y + offset);
-        } else {
-          ctx.moveTo(x - r, y + offset);
-          ctx.lineTo(x + r, y + offset + r * 2);
-        }
-
+        ctx.moveTo(xx, y + radius);
+        ctx.lineTo(xx + radius * 2, y - radius);
         ctx.stroke();
       }
     } else if (pattern === "Hexagon") {
-      const size = 5;
-      const stepX = size * 1.75;
-      const stepY = size * 1.5;
-
-      for (let row = -r; row <= r; row += stepY) {
-        for (let col = -r; col <= r; col += stepX) {
-          const hx =
-            x + col +
-            (Math.round(row / stepY) % 2) * size * 0.875;
-
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1.5;
+      const step = 12;
+      for (let row = -radius; row <= radius; row += step * .85) {
+        for (let col = -radius; col <= radius; col += step) {
+          const hx = x + col + ((Math.round(row / (step * .85)) % 2) * step / 2);
           const hy = y + row;
-
           ctx.beginPath();
-
           for (let i = 0; i < 6; i++) {
             const angle = Math.PI / 3 * i;
-            const px = hx + Math.cos(angle) * size;
-            const py = hy + Math.sin(angle) * size;
-
-            if (i === 0) {
-              ctx.moveTo(px, py);
-            } else {
-              ctx.lineTo(px, py);
-            }
+            const px = hx + Math.cos(angle) * 4;
+            const py = hy + Math.sin(angle) * 4;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
           }
-
           ctx.closePath();
           ctx.stroke();
         }
       }
     }
-
     ctx.restore();
 
+    ctx.strokeStyle = player.id === myId || player.socketId === myId ? "#ffffff" : "#00000088";
+    ctx.lineWidth = player.id === myId || player.socketId === myId ? 2.5 : 1.5;
     ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.strokeStyle = "rgba(255,255,255,0.45)";
-    ctx.lineWidth = 1;
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
     ctx.stroke();
   }
 
-  function getRenderedPosition(p, now) {
-    const previous = previousPositions.get(p.id);
+  function drawPlayers() {
+    const players = getPlayers();
+    for (const player of players) {
+      const x = getPlayerX(player);
+      const y = getPlayerY(player);
+      const sx = worldToScreenX(x);
+      const sy = worldToScreenY(y);
+      const radius = Number(player.radius) || 13;
+      if (sx < -radius - 100 || sx > screenWidth + radius + 100 ||
+          sy < -radius - 100 || sy > screenHeight + radius + 100) continue;
 
-    if (!previous) {
-      return { x: p.x, y: p.y };
+      if (player.grappled || player.grappleTarget) {
+        const target = player.grappleTarget;
+        if (target && typeof target === "object") {
+          const tx = Number(target.x);
+          const ty = Number(target.y);
+          if (Number.isFinite(tx) && Number.isFinite(ty)) {
+            ctx.strokeStyle = "#ffcc6b";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(sx, sy);
+            ctx.lineTo(worldToScreenX(tx), worldToScreenY(ty));
+            ctx.stroke();
+          }
+        }
+      }
+
+      drawPlayerPattern(player, sx, sy, radius);
+
+      if (player.name) {
+        ctx.font = "bold 12px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "bottom";
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#070a11";
+        ctx.strokeText(String(player.name).slice(0, 18), sx, sy - radius - 5);
+        ctx.fillStyle = "#ffffff";
+        ctx.fillText(String(player.name).slice(0, 18), sx, sy - radius - 5);
+      }
     }
+  }
 
-    const alpha = Math.max(
-      0,
-      Math.min(1, (now - snapshotTime) / 33.333)
+  function drawWorldBounds() {
+    const world = getWorldSize();
+    ctx.strokeStyle = "#73829c55";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(
+      worldToScreenX(0),
+      worldToScreenY(0),
+      world.width,
+      world.height
     );
-
-    return {
-      x: previous.x + (p.x - previous.x) * alpha,
-      y: previous.y + (p.y - previous.y) * alpha
-    };
   }
 
   function draw() {
-    const w = innerWidth;
-    const h = innerHeight;
-    const frameTime = performance.now();
-
-    ctx.clearRect(0, 0, w, h);
-
-    localPlayer = getMe();
-
-    const localRenderPosition = localPlayer
-      ? getRenderedPosition(localPlayer, frameTime)
-      : null;
-
-    if (localPlayer) {
-      cameraX = localRenderPosition.x - w / 2;
-      cameraY = localRenderPosition.y - h / 2;
-
-      cameraX = Math.max(
-        -w / 2 + world.width / 2,
-        Math.min(world.width - w / 2, cameraX)
-      );
-
-      restartButton.style.display = localPlayer.floating
-        ? "block"
-        : "none";
-
-      const hudSignature =
-        `${localPlayer.height}|${localPlayer.reds}|${localPlayer.wallHops}`;
-
-      if (hudSignature !== lastHudSignature) {
-        document.getElementById("height").textContent =
-          "HEIGHT: " + localPlayer.height + "m";
-
-        document.getElementById("reds").textContent =
-          "REDS: " + localPlayer.reds;
-
-        document.getElementById("hops").textContent =
-          "WALL HOPS: " + localPlayer.wallHops + "/5";
-
-        document.getElementById("shopReds").textContent =
-          localPlayer.reds + " Reds";
-
-        lastHudSignature = hudSignature;
-      }
-
-      document.getElementById("grappleLength").textContent =
-        "GRAPPLE LENGTH: " + localPlayer.grappleMultiplier + "x";
-
-      upgradeButton.textContent =
-        localPlayer.grappleUpgradeCost === null
-          ? "MAXIMUM REACHED"
-          : "Upgrade (" + localPlayer.grappleUpgradeCost + " Reds)";
-
-      upgradeButton.disabled =
-        localPlayer.grappleUpgradeCost === null;
-    } else {
-      cameraX = 0;
-      cameraY = world.height - h;
-    }
-
-    const altitude = localPlayer
-      ? Math.max(0, (world.height - localPlayer.y) / world.height)
-      : 0;
-
-    const sky = ctx.createLinearGradient(0, 0, 0, h);
-    const blue = Math.max(0, 190 * (1 - altitude * 2.5));
-
-    sky.addColorStop(
-      0,
-      `rgb(${Math.floor(blue * 0.55)},${Math.floor(blue * 0.82)},${Math.floor(blue)})`
-    );
-
-    sky.addColorStop(1, "#03050a");
-
-    ctx.fillStyle = localPlayer && localPlayer.floating
-      ? "#070716"
-      : sky;
-
-    ctx.fillRect(0, 0, w, h);
-
-    ctx.save();
-    ctx.translate(-cameraX, -cameraY);
-
-    ctx.fillStyle = "#111722";
-    ctx.fillRect(-1500, 0, 1500, world.height + 2000);
-    ctx.fillRect(world.width, 0, 1500, world.height + 2000);
-
-    ctx.fillStyle = "#222936";
-    ctx.fillRect(
-      -1000,
-      world.height,
-      world.width + 2000,
-      1000
-    );
-
-    grapplePoints.forEach(point => {
-      const sx = point.x - cameraX;
-      const sy = point.y - cameraY;
-
-      if (
-        sx < -50 ||
-        sx > w + 50 ||
-        sy < -50 ||
-        sy > h + 50
-      ) {
-        return;
-      }
-
-      drawCircle(
-        point.x,
-        point.y,
-        point.radius,
-        "#ff6500"
-      );
-
-      if (Math.hypot(mouse.x - sx, mouse.y - sy) < 150) {
-        ctx.strokeStyle = "#aaa";
-        ctx.lineWidth = 2;
-
-        ctx.beginPath();
-        ctx.arc(
-          point.x,
-          point.y,
-          point.radius + 6,
-          0,
-          Math.PI * 2
-        );
-        ctx.stroke();
-      }
-    });
-
-    bots.forEach(bot => {
-      const sx = bot.x - cameraX;
-      const sy = bot.y - cameraY;
-
-      if (
-        sx < -40 ||
-        sx > w + 40 ||
-        sy < -40 ||
-        sy > h + 40
-      ) {
-        return;
-      }
-
-      drawCircle(bot.x, bot.y, 18, "#ff3030");
-
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 10px Arial";
-      ctx.textAlign = "center";
-      ctx.fillText("+10", bot.x, bot.y + 3);
-    });
-
-    drawCircle(
-      world.moon.x,
-      world.moon.y,
-      world.moon.radius,
-      "#e8edf5"
-    );
-
-    drawCircle(
-      world.moon.x - 130,
-      world.moon.y - 80,
-      65,
-      "#cbd2df"
-    );
-
-    drawCircle(
-      world.moon.x + 145,
-      world.moon.y + 95,
-      90,
-      "#cbd2df"
-    );
-
-    drawCircle(
-      world.moon.x + 35,
-      world.moon.y - 190,
-      45,
-      "#cbd2df"
-    );
-
-    players.forEach(p => {
-      const rendered = getRenderedPosition(p, frameTime);
-
-      if (p.hook) {
-        ctx.strokeStyle = p.id === myId ? "#bbb" : "#777";
-        ctx.lineWidth = 2;
-
-        ctx.beginPath();
-        ctx.moveTo(rendered.x, rendered.y);
-        ctx.lineTo(p.hook.x, p.hook.y);
-        ctx.stroke();
-      }
-
-      drawPatternCircle(
-        rendered.x,
-        rendered.y,
-        p.size,
-        p.color || "#00ff66",
-        p.pattern || "Solid"
-      );
-
-      ctx.fillStyle = "#bbb";
-      ctx.font = "12px Arial";
-      ctx.textAlign = "center";
-      ctx.fillText(
-        p.name,
-        rendered.x,
-        rendered.y - 27
-      );
-    });
-
-    ctx.restore();
-
-    const sorted = [...players]
-      .sort((a, b) => b.height - a.height)
-      .slice(0, 7);
-
-    const signature = sorted
-      .map((p, i) => `${i + 1}:${p.id}:${p.name}:${p.height}`)
-      .join("|");
-
-    if (signature !== lastLeaderboardSignature) {
-      const leaderRows = document.getElementById("leaderRows");
-
-      if (!sorted.length) {
-        leaderRows.textContent = "Waiting for players...";
-      } else {
-        const fragment = document.createDocumentFragment();
-
-        sorted.forEach((p, i) => {
-          const row = document.createElement("div");
-          row.className = "leaderRow";
-
-          const name = document.createElement("span");
-          name.textContent =
-            (i + 1) + ". " + p.name +
-            (p.id === myId ? " (you)" : "");
-
-          const height = document.createElement("span");
-          height.textContent = p.height + "m";
-
-          row.append(name, height);
-          fragment.append(row);
-        });
-
-        leaderRows.replaceChildren(fragment);
-      }
-
-      lastLeaderboardSignature = signature;
-    }
-
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawBackground();
+    updateCamera();
+    drawWorldBounds();
+    drawMoon();
+    drawGrapplePoints();
+    drawReds();
+    drawPlayers();
     requestAnimationFrame(draw);
   }
 
-  setInterval(sendInput, 1000 / 30);
+  function sendInput(now) {
+    if (!socket.connected || !myPlayer || currentMenu) {
+      lastInputSent = now;
+      return;
+    }
+    if (now - lastInputSent < 1000 / 30) return;
+    lastInputSent = now;
 
-  draw();
+    const left = leftPressed || keys.has("a") || keys.has("arrowleft");
+    const right = rightPressed || keys.has("d") || keys.has("arrowright");
+    const jump = jumpQueued || keys.has(" ") || keys.has("w") || keys.has("arrowup");
+    const grappling = mouseDown || mobileGrapple;
+
+    const worldAimX = cameraX + (mouseX - screenWidth / 2);
+    const worldAimY = cameraY + (mouseY - screenHeight / 2);
+
+    socket.emit("input", {
+      left,
+      right,
+      jump,
+      mouseDown: grappling,
+      aimX: worldAimX,
+      aimY: worldAimY
+    });
+
+    jumpQueued = false;
+  }
+
+  function frameInput(now) {
+    sendInput(now);
+    requestAnimationFrame(frameInput);
+  }
+
+  canvas.addEventListener("pointermove", event => {
+    mouseX = event.clientX;
+    mouseY = event.clientY;
+  });
+
+  canvas.addEventListener("pointerdown", event => {
+    if (event.button !== 0 || currentMenu) return;
+    mouseX = event.clientX;
+    mouseY = event.clientY;
+    mouseDown = true;
+    try { canvas.setPointerCapture(event.pointerId); } catch (_) {}
+  });
+
+  window.addEventListener("pointerup", event => {
+    if (event.button === 0) mouseDown = false;
+  });
+
+  window.addEventListener("pointercancel", () => {
+    mouseDown = false;
+    mobileGrapple = false;
+  });
+
+  function bindHoldButton(id, onDown, onUp) {
+    const button = $(id);
+    button.addEventListener("pointerdown", event => {
+      event.preventDefault();
+      onDown();
+      try { button.setPointerCapture(event.pointerId); } catch (_) {}
+    });
+    button.addEventListener("pointerup", event => {
+      event.preventDefault();
+      onUp();
+    });
+    button.addEventListener("pointercancel", onUp);
+    button.addEventListener("lostpointercapture", onUp);
+    button.addEventListener("contextmenu", event => event.preventDefault());
+  }
+
+  bindHoldButton("leftButton", () => leftPressed = true, () => leftPressed = false);
+  bindHoldButton("rightButton", () => rightPressed = true, () => rightPressed = false);
+  bindHoldButton("jumpButton", () => jumpQueued = true, () => {});
+  bindHoldButton("grappleButton", () => mobileGrapple = true, () => mobileGrapple = false);
+
+  window.addEventListener("contextmenu", event => event.preventDefault());
+
+  setInterval(() => {
+    if (gameState) {
+      myPlayer = findMyPlayer();
+      updateHud();
+      updateLeaderboard();
+    }
+  }, 150);
+
+  requestAnimationFrame(draw);
+  requestAnimationFrame(frameInput);
 })();
 </script>
 </body>
