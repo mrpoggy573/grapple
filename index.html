@@ -5,44 +5,251 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>grapple</title>
 <style>
-* { box-sizing: border-box; }
-html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #05070c; color: #fff; font-family: Arial, sans-serif; }
-canvas { display: block; width: 100vw; height: 100vh; }
-.panel { background: rgba(8, 12, 20, .88); border: 1px solid rgba(255,170,0,.65); border-radius: 9px; box-shadow: 0 5px 20px #0005; }
-#menu { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, #172033, #05070c); }
-#menuBox { width: min(340px, calc(100vw - 30px)); padding: 24px; text-align: center; }
-h1 { margin: 0 0 8px; font-size: 48px; letter-spacing: 1px; }
-p { color: #c7cbd4; }
-input, button { font: inherit; }
-input { width: 100%; padding: 11px; margin: 12px 0 8px; border: 1px solid #ffaa00; border-radius: 6px; background: #10141d; color: white; }
-button { border: 0; border-radius: 6px; padding: 10px 12px; cursor: pointer; font-weight: bold; }
-button:disabled { opacity: .5; cursor: default; }
-#play { width: 100%; margin-top: 5px; background: #ffaa00; color: #111; }
-#hud { display: none; position: fixed; left: 14px; top: 14px; z-index: 2; pointer-events: none; color: #ffca52; text-shadow: 1px 2px #000; line-height: 1.5; font-size: 15px; }
-#leaderboard { position: fixed; top: 14px; right: 14px; z-index: 3; width: 180px; padding: 10px; pointer-events: none; }
-.panelTitle { font-weight: bold; color: #ffbd36; margin-bottom: 7px; }
-.leaderRow { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; padding: 3px 0; color: #eee; }
-.leaderRow span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#shop { display: none; position: fixed; right: 14px; top: 180px; z-index: 3; width: 180px; padding: 10px; }
-.shopItem { display: flex; align-items: center; justify-content: space-between; gap: 5px; margin-top: 7px; font-size: 12px; }
-.shopItem button { padding: 6px 7px; font-size: 11px; background: #ffaa00; color: #111; white-space: nowrap; }
-.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
-#restart { display: none; position: fixed; right: 14px; bottom: 14px; z-index: 5; background: #ffaa00; color: #111; padding: 12px 18px; }
-#toast { position: fixed; left: 50%; top: 20px; transform: translateX(-50%); z-index: 20; padding: 9px 14px; display: none; }
-#help { position: fixed; left: 14px; bottom: 14px; z-index: 2; color: #ddd; background: #0008; padding: 7px 9px; border-radius: 6px; font-size: 12px; pointer-events: none; }
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #05070c;
+  color: #aaa;
+  font-family: Arial, sans-serif;
+}
+
+canvas {
+  display: block;
+  width: 100vw;
+  height: 100vh;
+}
+
+#menu {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #080808;
+}
+
+#menuBox {
+  width: min(340px, calc(100vw - 30px));
+  padding: 24px;
+  text-align: center;
+}
+
+h1 {
+  margin: 0 0 8px;
+  font-size: 42px;
+  font-weight: normal;
+  color: #ccc;
+}
+
+p {
+  color: #888;
+}
+
+input, select, button {
+  font: inherit;
+  background: #191919;
+  color: #bbb;
+  border: 1px solid #444;
+  border-radius: 2px;
+}
+
+input {
+  padding: 9px;
+  margin: 12px 0 8px;
+}
+
+button {
+  padding: 6px 9px;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+#name {
+  width: 100%;
+}
+
+#play {
+  width: 100%;
+  margin-top: 5px;
+  padding: 9px;
+  background: #333;
+  color: #ddd;
+}
+
+#hud {
+  display: none;
+  position: fixed;
+  left: 14px;
+  top: 14px;
+  z-index: 2;
+  pointer-events: none;
+  color: #bbb;
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+#leaderboard {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 3;
+  width: 180px;
+  pointer-events: none;
+}
+
+.panelTitle {
+  font-weight: normal;
+  color: #999;
+  margin-bottom: 5px;
+}
+
+.leaderRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  padding: 2px 0;
+  color: #aaa;
+}
+
+.leaderRow span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#shop {
+  display: none;
+  position: fixed;
+  right: 14px;
+  top: 155px;
+  z-index: 3;
+  width: 180px;
+  color: #aaa;
+  font-size: 12px;
+  line-height: 1.9;
+}
+
+#shop button {
+  font-size: 12px;
+}
+
+#customize {
+  display: none;
+  position: fixed;
+  right: 14px;
+  top: 225px;
+  z-index: 3;
+  width: 180px;
+  color: #aaa;
+  font-size: 12px;
+  line-height: 2.2;
+}
+
+#customize label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+#playerColor {
+  width: 34px;
+  height: 23px;
+  padding: 0;
+  margin: 0;
+}
+
+#playerPattern {
+  max-width: 125px;
+  padding: 3px;
+  font-size: 12px;
+}
+
+#restart {
+  display: none;
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 5;
+  color: #bbb;
+  padding: 8px 12px;
+}
+
+#toast {
+  position: fixed;
+  left: 50%;
+  top: 20px;
+  transform: translateX(-50%);
+  z-index: 20;
+  padding: 7px 10px;
+  display: none;
+  background: #111;
+  color: #ccc;
+  font-size: 13px;
+}
+
+#help {
+  position: fixed;
+  left: 14px;
+  bottom: 14px;
+  z-index: 2;
+  color: #888;
+  font-size: 12px;
+  pointer-events: none;
+  line-height: 1.5;
+}
+
 @media (max-width: 600px) {
-  #leaderboard { width: 145px; right: 8px; top: 8px; }
-  #shop { right: 8px; top: 165px; width: 145px; }
-  #hud { left: 8px; top: 8px; font-size: 13px; }
-  #help { left: 8px; bottom: 8px; max-width: 145px; line-height: 1.4; }
+  #leaderboard {
+    width: 145px;
+    right: 8px;
+    top: 8px;
+  }
+
+  #shop {
+    right: 8px;
+    top: 150px;
+    width: 145px;
+  }
+
+  #customize {
+    right: 8px;
+    top: 215px;
+    width: 145px;
+  }
+
+  #hud {
+    left: 8px;
+    top: 8px;
+    font-size: 13px;
+  }
+
+  #help {
+    left: 8px;
+    bottom: 8px;
+    max-width: 145px;
+  }
 }
 </style>
 </head>
+
 <body>
 <canvas id="game"></canvas>
 
 <div id="menu">
-  <div id="menuBox" class="panel">
+  <div id="menuBox">
     <h1>grapple</h1>
     <p>Climb up. Reach the Moon.</p>
     <input id="name" maxlength="16" placeholder="Your name" value="Player" autocomplete="off">
@@ -57,53 +264,109 @@ button:disabled { opacity: .5; cursor: default; }
   <div id="hops">WALL HOPS: 5/5</div>
 </div>
 
-<div id="leaderboard" class="panel">
+<div id="leaderboard">
   <div class="panelTitle">LEADERBOARD</div>
   <div id="leaderRows">Waiting for players...</div>
 </div>
 
-<div id="shop" class="panel">
-  <div class="panelTitle">SHOP <span id="shopReds" style="float:right;color:#fff">10 Reds</span></div>
-  <div id="shopItems"></div>
+<div id="shop">
+  <div>SHOP</div>
+  <div id="grappleLength">GRAPPLE LENGTH: 1x</div>
+  <div id="shopReds">10 Reds</div>
+  <button id="grappleUpgrade">Upgrade Grapple</button>
 </div>
 
-<div id="help">A / D or ← / → to move<br>W / Space to jump<br>Hold mouse to grapple</div>
-<div id="restart" class="panel">RESTART</div>
-<div id="toast" class="panel"></div>
+<div id="customize">
+  <div>YOUR CIRCLE</div>
+  <label>
+    Color
+    <input id="playerColor" type="color" value="#00ff66">
+  </label>
+  <label>
+    Pattern
+    <select id="playerPattern">
+      <option value="Solid">Solid</option>
+      <option value="Horizontal">Lines</option>
+      <option value="Diagonal">Diagonal</option>
+      <option value="Hexagon">Hexagon</option>
+    </select>
+  </label>
+</div>
+
+<div id="help">
+  A / D or ← / → to move<br>
+  W / Space to jump<br>
+  Hold mouse to grapple
+</div>
+
+<button id="restart">RESTART</button>
+<div id="toast"></div>
 
 <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
 <script>
 (() => {
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
+
   const menu = document.getElementById("menu");
   const status = document.getElementById("status");
   const hud = document.getElementById("hud");
   const shop = document.getElementById("shop");
   const restartButton = document.getElementById("restart");
-  const socket = io("https://grapple-qqcp.onrender.com");
+
+  const socket = io("https://grapple-qqcp.onrender.com", {
+    transports: ["websocket", "polling"]
+  });
 
   let myId = null;
   let joined = false;
-  let world = { width: 1000, height: 30000, moon: { x: 500, y: 1500, radius: 500 } };
+
+  let world = {
+    width: 1000,
+    height: 30000,
+    moon: {
+      x: 500,
+      y: 1500,
+      radius: 500
+    }
+  };
+
   let grapplePoints = [];
   let players = [];
   let bots = [];
-  let shopItems = [];
-  let mouse = { x: 0, y: 0, down: false };
+
+  let mouse = {
+    x: 0,
+    y: 0,
+    down: false
+  };
+
   let keys = {};
   let localPlayer = null;
+
   let cameraX = 0;
   let cameraY = 0;
-  let lastSnapshot = 0;
+
+  let snapshotTime = 0;
   let toastTimer = null;
+
+  let previousPositions = new Map();
+  let lastLeaderboardSignature = "";
+  let lastHudSignature = "";
+
+  const colorInput = document.getElementById("playerColor");
+  const patternInput = document.getElementById("playerPattern");
+  const upgradeButton = document.getElementById("grappleUpgrade");
 
   function resize() {
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
+
     canvas.width = Math.floor(innerWidth * dpr);
     canvas.height = Math.floor(innerHeight * dpr);
+
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
+
   addEventListener("resize", resize);
   resize();
 
@@ -111,79 +374,127 @@ button:disabled { opacity: .5; cursor: default; }
     status.textContent = "Ready to play";
     document.getElementById("play").disabled = false;
   });
+
   socket.on("disconnect", () => {
-    status.textContent = "Disconnected. Refresh to reconnect.";
-    if (!joined) document.getElementById("play").disabled = true;
+    status.textContent = "Disconnected. Reconnecting...";
+
+    if (!joined) {
+      document.getElementById("play").disabled = true;
+    }
+  });
+
+  socket.on("connect_error", () => {
+    if (!joined) {
+      status.textContent = "Connecting to server...";
+    }
   });
 
   socket.on("init", data => {
     myId = data.id;
     world = data.world;
     grapplePoints = data.grapplePoints;
-    shopItems = data.shop;
     players = data.players;
     bots = data.bots;
+
+    previousPositions = new Map(
+      players.map(p => [
+        p.id,
+        { x: p.x, y: p.y }
+      ])
+    );
+
     joined = true;
+
     menu.style.display = "none";
     hud.style.display = "block";
     shop.style.display = "block";
-    buildShop();
-    lastSnapshot = performance.now();
+    document.getElementById("customize").style.display = "block";
+
+    snapshotTime = performance.now();
+
+    updateAppearance();
   });
 
   socket.on("playerJoined", p => {
-    if (!players.some(pl => pl.id === p.id)) players.push(p);
+    if (!players.some(player => player.id === p.id)) {
+      players.push(p);
+    }
   });
+
   socket.on("playerLeft", id => {
     players = players.filter(p => p.id !== id);
+    previousPositions.delete(id);
   });
+
   socket.on("state", state => {
+    const now = performance.now();
+
+    previousPositions = new Map(
+      players.map(p => [
+        p.id,
+        { x: p.x, y: p.y }
+      ])
+    );
+
     players = state.players;
     bots = state.bots;
     world = state.world;
-    lastSnapshot = performance.now();
+
+    snapshotTime = now;
   });
+
   socket.on("botTaken", id => {
-    bots = bots.filter(b => b.id !== id);
+    bots = bots.filter(bot => bot.id !== id);
   });
-  socket.on("notice", message => showToast(message));
+
+  socket.on("notice", message => {
+    showToast(message);
+  });
 
   document.getElementById("play").addEventListener("click", () => {
     if (!socket.connected) {
       status.textContent = "Server not connected.";
       return;
     }
+
     document.getElementById("play").disabled = true;
-    socket.emit("join", { name: document.getElementById("name").value || "Player" });
+
+    socket.emit("join", {
+      name: document.getElementById("name").value || "Player"
+    });
   });
 
-  function buildShop() {
-    const root = document.getElementById("shopItems");
-    root.innerHTML = "";
-    shopItems.forEach(item => {
-      const row = document.createElement("div");
-      row.className = "shopItem";
-      const label = document.createElement("span");
-      const swatch = document.createElement("i");
-      swatch.className = "swatch";
-      swatch.style.background = ({Green:"#00ff66",Blue:"#45a3ff",Pink:"#ff65c8",Purple:"#b18cff",Gold:"#ffcc33"})[item.name] || "#fff";
-      label.append(swatch, document.createTextNode(item.name));
-      const button = document.createElement("button");
-      button.textContent = item.cost === 0 ? "FREE" : item.cost + " Reds";
-      button.addEventListener("click", () => {
-        if (joined) socket.emit("buySkin", item.name);
-      });
-      row.append(label, button);
-      root.append(row);
+  function updateAppearance() {
+    if (!joined) {
+      return;
+    }
+
+    socket.emit("setAppearance", {
+      color: colorInput.value,
+      pattern: patternInput.value
     });
   }
 
+  colorInput.addEventListener("input", updateAppearance);
+  patternInput.addEventListener("change", updateAppearance);
+
+  upgradeButton.addEventListener("click", () => {
+    if (joined) {
+      socket.emit("buyGrappleUpgrade");
+    }
+  });
+
   function showToast(message) {
     const toast = document.getElementById("toast");
+
     toast.textContent = message;
     toast.style.display = "block";
+
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.style.display = "none", 1800);
+
+    toastTimer = setTimeout(() => {
+      toast.style.display = "none";
+    }, 1800);
   }
 
   function getMe() {
@@ -191,32 +502,65 @@ button:disabled { opacity: .5; cursor: default; }
   }
 
   function sendInput() {
-    if (!joined || !localPlayer) return;
-    const aimX = mouse.x + cameraX;
-    const aimY = mouse.y + cameraY;
+    if (!joined || !localPlayer) {
+      return;
+    }
+
     socket.emit("input", {
       left: !!(keys.ArrowLeft || keys.KeyA),
       right: !!(keys.ArrowRight || keys.KeyD),
       jump: !!(keys.Space || keys.KeyW || keys.ArrowUp),
       mouseDown: mouse.down,
-      aimX,
-      aimY
+      aimX: mouse.x + cameraX,
+      aimY: mouse.y + cameraY
     });
   }
 
   addEventListener("keydown", e => {
-    if (["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code)) e.preventDefault();
+    if (
+      ["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]
+        .includes(e.code)
+    ) {
+      e.preventDefault();
+    }
+
     keys[e.code] = true;
-    if (e.code === "Escape") mouse.down = false;
+
+    if (e.code === "Escape") {
+      mouse.down = false;
+    }
   }, { passive: false });
-  addEventListener("keyup", e => { keys[e.code] = false; });
-  canvas.addEventListener("mousemove", e => { mouse.x = e.clientX; mouse.y = e.clientY; });
-  canvas.addEventListener("mousedown", e => { if (e.button === 0) mouse.down = true; });
-  addEventListener("mouseup", e => { if (e.button === 0) mouse.down = false; });
-  addEventListener("blur", () => { keys = {}; mouse.down = false; });
+
+  addEventListener("keyup", e => {
+    keys[e.code] = false;
+  });
+
+  canvas.addEventListener("mousemove", e => {
+    mouse.x = e.clientX;
+    mouse.y = e.clientY;
+  });
+
+  canvas.addEventListener("mousedown", e => {
+    if (e.button === 0) {
+      mouse.down = true;
+    }
+  });
+
+  addEventListener("mouseup", e => {
+    if (e.button === 0) {
+      mouse.down = false;
+    }
+  });
+
+  addEventListener("blur", () => {
+    keys = {};
+    mouse.down = false;
+  });
 
   restartButton.addEventListener("click", () => {
-    if (joined) socket.emit("restart");
+    if (joined) {
+      socket.emit("restart");
+    }
   });
 
   function drawCircle(x, y, r, color) {
@@ -226,32 +570,170 @@ button:disabled { opacity: .5; cursor: default; }
     ctx.fill();
   }
 
+  function drawPatternCircle(x, y, r, color, pattern) {
+    ctx.save();
+
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.clip();
+
+    ctx.strokeStyle = "rgba(255,255,255,0.82)";
+    ctx.lineWidth = 1.5;
+
+    if (pattern === "Horizontal" || pattern === "Diagonal") {
+      for (let offset = -r * 2; offset <= r * 2; offset += 7) {
+        ctx.beginPath();
+
+        if (pattern === "Horizontal") {
+          ctx.moveTo(x - r, y + offset);
+          ctx.lineTo(x + r, y + offset);
+        } else {
+          ctx.moveTo(x - r, y + offset);
+          ctx.lineTo(x + r, y + offset + r * 2);
+        }
+
+        ctx.stroke();
+      }
+    } else if (pattern === "Hexagon") {
+      const size = 5;
+      const stepX = size * 1.75;
+      const stepY = size * 1.5;
+
+      for (let row = -r; row <= r; row += stepY) {
+        for (let col = -r; col <= r; col += stepX) {
+          const hx =
+            x + col +
+            (Math.round(row / stepY) % 2) * size * 0.875;
+
+          const hy = y + row;
+
+          ctx.beginPath();
+
+          for (let i = 0; i < 6; i++) {
+            const angle = Math.PI / 3 * i;
+            const px = hx + Math.cos(angle) * size;
+            const py = hy + Math.sin(angle) * size;
+
+            if (i === 0) {
+              ctx.moveTo(px, py);
+            } else {
+              ctx.lineTo(px, py);
+            }
+          }
+
+          ctx.closePath();
+          ctx.stroke();
+        }
+      }
+    }
+
+    ctx.restore();
+
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,255,255,0.45)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  function getRenderedPosition(p, now) {
+    const previous = previousPositions.get(p.id);
+
+    if (!previous) {
+      return { x: p.x, y: p.y };
+    }
+
+    const alpha = Math.max(
+      0,
+      Math.min(1, (now - snapshotTime) / 33.333)
+    );
+
+    return {
+      x: previous.x + (p.x - previous.x) * alpha,
+      y: previous.y + (p.y - previous.y) * alpha
+    };
+  }
+
   function draw() {
-    const w = innerWidth, h = innerHeight;
+    const w = innerWidth;
+    const h = innerHeight;
+    const frameTime = performance.now();
+
     ctx.clearRect(0, 0, w, h);
 
     localPlayer = getMe();
+
+    const localRenderPosition = localPlayer
+      ? getRenderedPosition(localPlayer, frameTime)
+      : null;
+
     if (localPlayer) {
-      cameraX = localPlayer.x - w / 2;
-      cameraY = localPlayer.y - h / 2;
-      cameraX = Math.max(-w / 2 + world.width / 2, Math.min(world.width - w / 2, cameraX));
-      if (localPlayer.floating) restartButton.style.display = "block";
-      else restartButton.style.display = "none";
-      document.getElementById("height").textContent = "HEIGHT: " + localPlayer.height + "m";
-      document.getElementById("reds").textContent = "REDS: " + localPlayer.reds;
-      document.getElementById("hops").textContent = "WALL HOPS: " + localPlayer.wallHops + "/5";
-      document.getElementById("shopReds").textContent = localPlayer.reds + " Reds";
+      cameraX = localRenderPosition.x - w / 2;
+      cameraY = localRenderPosition.y - h / 2;
+
+      cameraX = Math.max(
+        -w / 2 + world.width / 2,
+        Math.min(world.width - w / 2, cameraX)
+      );
+
+      restartButton.style.display = localPlayer.floating
+        ? "block"
+        : "none";
+
+      const hudSignature =
+        `${localPlayer.height}|${localPlayer.reds}|${localPlayer.wallHops}`;
+
+      if (hudSignature !== lastHudSignature) {
+        document.getElementById("height").textContent =
+          "HEIGHT: " + localPlayer.height + "m";
+
+        document.getElementById("reds").textContent =
+          "REDS: " + localPlayer.reds;
+
+        document.getElementById("hops").textContent =
+          "WALL HOPS: " + localPlayer.wallHops + "/5";
+
+        document.getElementById("shopReds").textContent =
+          localPlayer.reds + " Reds";
+
+        lastHudSignature = hudSignature;
+      }
+
+      document.getElementById("grappleLength").textContent =
+        "GRAPPLE LENGTH: " + localPlayer.grappleMultiplier + "x";
+
+      upgradeButton.textContent =
+        localPlayer.grappleUpgradeCost === null
+          ? "MAXIMUM REACHED"
+          : "Upgrade (" + localPlayer.grappleUpgradeCost + " Reds)";
+
+      upgradeButton.disabled =
+        localPlayer.grappleUpgradeCost === null;
     } else {
       cameraX = 0;
       cameraY = world.height - h;
     }
 
-    const altitude = localPlayer ? Math.max(0, (world.height - localPlayer.y) / world.height) : 0;
+    const altitude = localPlayer
+      ? Math.max(0, (world.height - localPlayer.y) / world.height)
+      : 0;
+
     const sky = ctx.createLinearGradient(0, 0, 0, h);
     const blue = Math.max(0, 190 * (1 - altitude * 2.5));
-    sky.addColorStop(0, `rgb(${Math.floor(blue*.55)},${Math.floor(blue*.82)},${Math.floor(blue)})`);
+
+    sky.addColorStop(
+      0,
+      `rgb(${Math.floor(blue * 0.55)},${Math.floor(blue * 0.82)},${Math.floor(blue)})`
+    );
+
     sky.addColorStop(1, "#03050a");
-    ctx.fillStyle = localPlayer && localPlayer.floating ? "#070716" : sky;
+
+    ctx.fillStyle = localPlayer && localPlayer.floating
+      ? "#070716"
+      : sky;
+
     ctx.fillRect(0, 0, w, h);
 
     ctx.save();
@@ -260,76 +742,175 @@ button:disabled { opacity: .5; cursor: default; }
     ctx.fillStyle = "#111722";
     ctx.fillRect(-1500, 0, 1500, world.height + 2000);
     ctx.fillRect(world.width, 0, 1500, world.height + 2000);
+
     ctx.fillStyle = "#222936";
-    ctx.fillRect(-1000, world.height, world.width + 2000, 1000);
+    ctx.fillRect(
+      -1000,
+      world.height,
+      world.width + 2000,
+      1000
+    );
 
     grapplePoints.forEach(point => {
-      const sx = point.x - cameraX, sy = point.y - cameraY;
-      if (sx < -50 || sx > w + 50 || sy < -50 || sy > h + 50) return;
-      drawCircle(point.x, point.y, point.radius, "#ff6500");
+      const sx = point.x - cameraX;
+      const sy = point.y - cameraY;
+
+      if (
+        sx < -50 ||
+        sx > w + 50 ||
+        sy < -50 ||
+        sy > h + 50
+      ) {
+        return;
+      }
+
+      drawCircle(
+        point.x,
+        point.y,
+        point.radius,
+        "#ff6500"
+      );
+
       if (Math.hypot(mouse.x - sx, mouse.y - sy) < 150) {
-        ctx.strokeStyle = "#ffe66b";
-        ctx.lineWidth = 3;
+        ctx.strokeStyle = "#aaa";
+        ctx.lineWidth = 2;
+
         ctx.beginPath();
-        ctx.arc(point.x, point.y, point.radius + 6, 0, Math.PI * 2);
+        ctx.arc(
+          point.x,
+          point.y,
+          point.radius + 6,
+          0,
+          Math.PI * 2
+        );
         ctx.stroke();
       }
     });
 
     bots.forEach(bot => {
-      drawCircle(bot.x, bot.y, 18, "#ff9d00");
-      ctx.fillStyle = "#1a1200";
+      const sx = bot.x - cameraX;
+      const sy = bot.y - cameraY;
+
+      if (
+        sx < -40 ||
+        sx > w + 40 ||
+        sy < -40 ||
+        sy > h + 40
+      ) {
+        return;
+      }
+
+      drawCircle(bot.x, bot.y, 18, "#ff3030");
+
+      ctx.fillStyle = "#ffffff";
       ctx.font = "bold 10px Arial";
       ctx.textAlign = "center";
       ctx.fillText("+10", bot.x, bot.y + 3);
     });
 
-    // The Moon is the finish landmark. There is no lava or endgame hazard.
-    drawCircle(world.moon.x, world.moon.y, world.moon.radius, "#e8edf5");
-    drawCircle(world.moon.x - 130, world.moon.y - 80, 65, "#cbd2df");
-    drawCircle(world.moon.x + 145, world.moon.y + 95, 90, "#cbd2df");
-    drawCircle(world.moon.x + 35, world.moon.y - 190, 45, "#cbd2df");
+    drawCircle(
+      world.moon.x,
+      world.moon.y,
+      world.moon.radius,
+      "#e8edf5"
+    );
+
+    drawCircle(
+      world.moon.x - 130,
+      world.moon.y - 80,
+      65,
+      "#cbd2df"
+    );
+
+    drawCircle(
+      world.moon.x + 145,
+      world.moon.y + 95,
+      90,
+      "#cbd2df"
+    );
+
+    drawCircle(
+      world.moon.x + 35,
+      world.moon.y - 190,
+      45,
+      "#cbd2df"
+    );
 
     players.forEach(p => {
+      const rendered = getRenderedPosition(p, frameTime);
+
       if (p.hook) {
-        ctx.strokeStyle = p.id === myId ? "#fff" : "#80d8ff";
+        ctx.strokeStyle = p.id === myId ? "#bbb" : "#777";
         ctx.lineWidth = 2;
+
         ctx.beginPath();
-        ctx.moveTo(p.x, p.y);
+        ctx.moveTo(rendered.x, rendered.y);
         ctx.lineTo(p.hook.x, p.hook.y);
         ctx.stroke();
       }
-      drawCircle(p.x, p.y, p.size, p.color || "#00ff66");
-      ctx.fillStyle = "#fff";
-      ctx.font = "bold 13px Arial";
+
+      drawPatternCircle(
+        rendered.x,
+        rendered.y,
+        p.size,
+        p.color || "#00ff66",
+        p.pattern || "Solid"
+      );
+
+      ctx.fillStyle = "#bbb";
+      ctx.font = "12px Arial";
       ctx.textAlign = "center";
-      ctx.fillText(p.name, p.x, p.y - 27);
+      ctx.fillText(
+        p.name,
+        rendered.x,
+        rendered.y - 27
+      );
     });
 
     ctx.restore();
 
-    // Leaderboard stays in its own top-right panel, away from the HUD.
-    const sorted = [...players].sort((a, b) => b.height - a.height).slice(0, 7);
-    const leaderRows = document.getElementById("leaderRows");
-    if (!sorted.length) {
-      leaderRows.textContent = "Waiting for players...";
-    } else {
-      leaderRows.innerHTML = "";
-      sorted.forEach((p, i) => {
-        const row = document.createElement("div");
-        row.className = "leaderRow";
-        const name = document.createElement("span");
-        name.textContent = (i + 1) + ". " + p.name + (p.id === myId ? " (you)" : "");
-        const height = document.createElement("span");
-        height.textContent = p.height + "m";
-        row.append(name, height);
-        leaderRows.append(row);
-      });
+    const sorted = [...players]
+      .sort((a, b) => b.height - a.height)
+      .slice(0, 7);
+
+    const signature = sorted
+      .map((p, i) => `${i + 1}:${p.id}:${p.name}:${p.height}`)
+      .join("|");
+
+    if (signature !== lastLeaderboardSignature) {
+      const leaderRows = document.getElementById("leaderRows");
+
+      if (!sorted.length) {
+        leaderRows.textContent = "Waiting for players...";
+      } else {
+        const fragment = document.createDocumentFragment();
+
+        sorted.forEach((p, i) => {
+          const row = document.createElement("div");
+          row.className = "leaderRow";
+
+          const name = document.createElement("span");
+          name.textContent =
+            (i + 1) + ". " + p.name +
+            (p.id === myId ? " (you)" : "");
+
+          const height = document.createElement("span");
+          height.textContent = p.height + "m";
+
+          row.append(name, height);
+          fragment.append(row);
+        });
+
+        leaderRows.replaceChildren(fragment);
+      }
+
+      lastLeaderboardSignature = signature;
     }
 
-    sendInput();
     requestAnimationFrame(draw);
   }
+
+  setInterval(sendInput, 1000 / 30);
 
   draw();
 })();
