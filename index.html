@@ -1,324 +1,338 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grapple.io | Unified Race</title>
-    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
-    <style>
-        /* CORE SOLO VISUAL STYLE (Matching your Gold Script) */
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; color: white; transition: transform 2s ease-in-out; }
-        
-        #ui-layer { position: absolute; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; z-index: 2000; background: radial-gradient(circle, #1a1a2e, #000); }
-        .menu-box { background: rgba(0,0,0,0.9); padding: 30px; border-radius: 15px; text-align: center; border: 3px solid #ffaa00; width: 380px; }
-        h1 { font-size: 40px; color: #fff; margin-bottom: 10px; text-shadow: 0 0 10px #ffaa00; }
-        input { width: 85%; padding: 12px; margin: 10px 0; border-radius: 5px; border: 2px solid #ffaa00; background: #111; color: #fff; font-size: 18px; text-align: center; }
-        
-        /* Unified Button Style */
-        .btn { width: 100%; padding: 12px; margin: 5px 0; border-radius: 5px; border: none; font-size: 16px; cursor: pointer; font-weight: bold; text-transform: uppercase; }
-        .btn-solo { background: #2ecc71; color: #000; border-bottom: 4px solid #27ae60; }
-        .btn-host { background: #ffaa00; color: #000; border-bottom: 4px solid #e67e22; }
-        .btn-join { background: #3498db; color: #fff; border-bottom: 4px solid #2980b9; }
-        .btn-start { background: #ffaa00; color: #000; display: none; margin-top: 20px; }
-
-        /* Unified HUD (Matching your Gold Script exactly) */
-        #hud { position: absolute; top: 15px; left: 15px; color: #ffaa00; font-size: 20px; pointer-events: none; z-index: 10; line-height: 1.4; text-shadow: 2px 2px #000; display: none; }
-        #meter-container { position: absolute; left: 20px; top: 180px; width: 25px; height: 250px; background: rgba(255,255,255,0.1); border: 2px solid #ffaa00; }
-        #meter-fill { position: absolute; bottom: 0; width: 100%; background: #00ff00; }
-        #stamina-bar { width: 150px; height: 10px; background: #333; border: 1px solid #ffaa00; margin-top: 5px; }
-        #stamina-fill { height: 100%; background: #00ff00; }
-        #zero-g-alert { position: absolute; top: 20%; width: 100%; text-align: center; color: #00ffff; font-size: 30px; font-weight: bold; display: none; pointer-events: none; text-shadow: 0 0 10px #00ffff; }
-        
-        #lava-warning { position: absolute; top: 30%; width: 100%; text-align: center; font-size: 40px; color: #ff4400; font-weight: bold; display: none; }
-        #end-screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 3000; border: 4px solid #ffaa00; }
-        
-        .flipped { transform: rotate(180deg); }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>grapple</title>
+<style>
+* { box-sizing: border-box; }
+html, body { margin: 0; width: 100%; height: 100%; overflow: hidden; background: #05070c; color: #fff; font-family: Arial, sans-serif; }
+canvas { display: block; width: 100vw; height: 100vh; }
+.panel { background: rgba(8, 12, 20, .88); border: 1px solid rgba(255,170,0,.65); border-radius: 9px; box-shadow: 0 5px 20px #0005; }
+#menu { position: fixed; inset: 0; z-index: 10; display: flex; align-items: center; justify-content: center; background: radial-gradient(circle, #172033, #05070c); }
+#menuBox { width: min(340px, calc(100vw - 30px)); padding: 24px; text-align: center; }
+h1 { margin: 0 0 8px; font-size: 48px; letter-spacing: 1px; }
+p { color: #c7cbd4; }
+input, button { font: inherit; }
+input { width: 100%; padding: 11px; margin: 12px 0 8px; border: 1px solid #ffaa00; border-radius: 6px; background: #10141d; color: white; }
+button { border: 0; border-radius: 6px; padding: 10px 12px; cursor: pointer; font-weight: bold; }
+button:disabled { opacity: .5; cursor: default; }
+#play { width: 100%; margin-top: 5px; background: #ffaa00; color: #111; }
+#hud { display: none; position: fixed; left: 14px; top: 14px; z-index: 2; pointer-events: none; color: #ffca52; text-shadow: 1px 2px #000; line-height: 1.5; font-size: 15px; }
+#leaderboard { position: fixed; top: 14px; right: 14px; z-index: 3; width: 180px; padding: 10px; pointer-events: none; }
+.panelTitle { font-weight: bold; color: #ffbd36; margin-bottom: 7px; }
+.leaderRow { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; padding: 3px 0; color: #eee; }
+.leaderRow span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#shop { display: none; position: fixed; right: 14px; top: 180px; z-index: 3; width: 180px; padding: 10px; }
+.shopItem { display: flex; align-items: center; justify-content: space-between; gap: 5px; margin-top: 7px; font-size: 12px; }
+.shopItem button { padding: 6px 7px; font-size: 11px; background: #ffaa00; color: #111; white-space: nowrap; }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+#restart { display: none; position: fixed; right: 14px; bottom: 14px; z-index: 5; background: #ffaa00; color: #111; padding: 12px 18px; }
+#toast { position: fixed; left: 50%; top: 20px; transform: translateX(-50%); z-index: 20; padding: 9px 14px; display: none; }
+#help { position: fixed; left: 14px; bottom: 14px; z-index: 2; color: #ddd; background: #0008; padding: 7px 9px; border-radius: 6px; font-size: 12px; pointer-events: none; }
+@media (max-width: 600px) {
+  #leaderboard { width: 145px; right: 8px; top: 8px; }
+  #shop { right: 8px; top: 165px; width: 145px; }
+  #hud { left: 8px; top: 8px; font-size: 13px; }
+  #help { left: 8px; bottom: 8px; max-width: 145px; line-height: 1.4; }
+}
+</style>
 </head>
 <body>
+<canvas id="game"></canvas>
 
-    <div id="ui-layer">
-        <div class="menu-box" id="main-menu">
-            <h1>GRAPPLE.IO</h1>
-            <p id="total-reds-menu" style="color:red; font-size:24px;">REDS: 10</p>
-            <input type="text" id="pName" placeholder="PLAYER NAME" value="Player">
-            
-            <button class="btn btn-solo" onclick="startSolo()">SOLO CLIMB</button>
-            <p style="color: #666; margin: 10px 0;">OR MULTIPLAYER</p>
-            <button class="btn btn-host" onclick="hostRoom()">HOST GAME</button>
-            <input type="text" id="joinCode" placeholder="6-DIGIT CODE">
-            <button class="btn btn-join" onclick="joinRoom()">JOIN LOBBY</button>
-            
-            <button id="multi-start-btn" class="btn btn-start" onclick="startGame()">START GAME</button>
-        </div>
-    </div>
+<div id="menu">
+  <div id="menuBox" class="panel">
+    <h1>grapple</h1>
+    <p>Climb up. Reach the Moon.</p>
+    <input id="name" maxlength="16" placeholder="Your name" value="Player" autocomplete="off">
+    <button id="play">PLAY</button>
+    <p id="status" style="font-size:12px;margin-bottom:0">Connecting to server...</p>
+  </div>
+</div>
 
-    <div id="hud">
-        <div id="h-count">HEIGHT: 0m</div>
-        <div id="hp-count">HP: 100/100</div>
-        <div id="r-count-hud" style="color:red">REDS: 10</div>
-        <div id="s-text">WALL-HOPS: 5/5</div>
-        <div id="stamina-bar"><div id="stamina-fill" style="width: 100%"></div></div>
-        <div id="meter-container"><div id="meter-fill" style="height: 0%"></div></div>
-    </div>
+<div id="hud">
+  <div id="height">HEIGHT: 0m</div>
+  <div id="reds">REDS: 10</div>
+  <div id="hops">WALL HOPS: 5/5</div>
+</div>
 
-    <div id="zero-g-alert">ZERO GRAVITY - JUMPS DISABLED</div>
-    <div id="lava-warning">LAVA IS RISING!</div>
-    <div id="end-screen">
-        <h1 style="color:#ffaa00">MARS REACHED</h1>
-        <button class="btn btn-host" style="width:200px" onclick="location.reload()">REPLAY</button>
-    </div>
+<div id="leaderboard" class="panel">
+  <div class="panelTitle">LEADERBOARD</div>
+  <div id="leaderRows">Waiting for players...</div>
+</div>
 
-    <canvas id="gameCanvas"></canvas>
+<div id="shop" class="panel">
+  <div class="panelTitle">SHOP <span id="shopReds" style="float:right;color:#fff">10 Reds</span></div>
+  <div id="shopItems"></div>
+</div>
 
-    <script>
-    (function() {
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        let peer, myId, connections = {}, players = {};
-        let isStarted = false, isGameOver = false, soloMode = false;
+<div id="help">A / D or ← / → to move<br>W / Space to jump<br>Hold mouse to grapple</div>
+<div id="restart" class="panel">RESTART</div>
+<div id="toast" class="panel"></div>
 
-        // Your Exact Gold Script World/Physics
-        window.gameReds = 10;
-        const zeroGHeight = 2235;
-        const worldWidth = 1000, worldHeight = 30000, wallThickness = 1500;
-        let cameraY = 0, grapplePoints = [], bots = [];
-        const moon = { x: worldWidth/2, y: 1500, radius: 500 };
-        
-        // Mars/Endgame Cycle
-        let lavaY = worldHeight + 2000, lavaSpeed = 0.8, endgameTriggered = false;
+<script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+<script>
+(() => {
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
+  const menu = document.getElementById("menu");
+  const status = document.getElementById("status");
+  const hud = document.getElementById("hud");
+  const shop = document.getElementById("shop");
+  const restartButton = document.getElementById("restart");
+  const socket = io("https://grapple-qqcp.onrender.com");
 
-        // Player model (HP added for lava)
-        let p = {
-            x: worldWidth/2, y: worldHeight - 150, vx: 0, vy: 0, size: 18,
-            color: "#00ff00", name: "Player", onGround: false, onWall: false,
-            jumpForce: 17, wallHops: 5, maxHops: 5, staminaRegenTimer: null,
-            hook: { active: false, target: null, length: 0 }, hp: 100
-        };
+  let myId = null;
+  let joined = false;
+  let world = { width: 1000, height: 30000, moon: { x: 500, y: 1500, radius: 500 } };
+  let grapplePoints = [];
+  let players = [];
+  let bots = [];
+  let shopItems = [];
+  let mouse = { x: 0, y: 0, down: false };
+  let keys = {};
+  let localPlayer = null;
+  let cameraX = 0;
+  let cameraY = 0;
+  let lastSnapshot = 0;
+  let toastTimer = null;
 
-        let keys = {}, mouseX = 0, mouseY = 0, isMouseDown = false;
+  function resize() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.floor(innerWidth * dpr);
+    canvas.height = Math.floor(innerHeight * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  addEventListener("resize", resize);
+  resize();
 
-        // --- UNIFIED MENU ACTIONS ---
-        window.startSolo = () => { soloMode = true; realStart(); };
+  socket.on("connect", () => {
+    status.textContent = "Ready to play";
+    document.getElementById("play").disabled = false;
+  });
+  socket.on("disconnect", () => {
+    status.textContent = "Disconnected. Refresh to reconnect.";
+    if (!joined) document.getElementById("play").disabled = true;
+  });
 
-        window.hostRoom = () => {
-            let code = Math.floor(100000 + Math.random() * 900000).toString();
-            peer = new Peer('grapple-room-' + code);
-            peer.on('open', () => {
-                document.getElementById('total-reds-menu').innerText = "CODE: " + code;
-                document.getElementById('total-reds-menu').style.color = "#ffaa00";
-                document.getElementById('multi-start-btn').style.display = 'block';
-            });
-            peer.on('connection', c => {
-                connections[c.peer] = c;
-                c.on('data', data => { if(data.type==='sync') players[data.id] = data; });
-            });
-        };
+  socket.on("init", data => {
+    myId = data.id;
+    world = data.world;
+    grapplePoints = data.grapplePoints;
+    shopItems = data.shop;
+    players = data.players;
+    bots = data.bots;
+    joined = true;
+    menu.style.display = "none";
+    hud.style.display = "block";
+    shop.style.display = "block";
+    buildShop();
+    lastSnapshot = performance.now();
+  });
 
-        window.joinRoom = () => {
-            let code = document.getElementById('joinCode').value;
-            peer = new Peer();
-            peer.on('open', id => {
-                myId = id;
-                const c = peer.connect('grapple-room-' + code);
-                c.on('data', data => { if(data.type==='start') realStart(); });
-            });
-        };
+  socket.on("playerJoined", p => {
+    if (!players.some(pl => pl.id === p.id)) players.push(p);
+  });
+  socket.on("playerLeft", id => {
+    players = players.filter(p => p.id !== id);
+  });
+  socket.on("state", state => {
+    players = state.players;
+    bots = state.bots;
+    world = state.world;
+    lastSnapshot = performance.now();
+  });
+  socket.on("botTaken", id => {
+    bots = bots.filter(b => b.id !== id);
+  });
+  socket.on("notice", message => showToast(message));
 
-        window.startGame = () => {
-            Object.values(connections).forEach(c => c.send({type: 'start'}));
-            realStart();
-        };
+  document.getElementById("play").addEventListener("click", () => {
+    if (!socket.connected) {
+      status.textContent = "Server not connected.";
+      return;
+    }
+    document.getElementById("play").disabled = true;
+    socket.emit("join", { name: document.getElementById("name").value || "Player" });
+  });
 
-        function realStart() {
-            isStarted = true;
-            p.name = document.getElementById('pName').value || "Player";
-            document.getElementById('ui-layer').style.display = 'none';
-            document.getElementById('hud').style.display = 'block';
-            initWorld();
-            // RULE: Bots despawn after 2 minutes
-            setTimeout(() => { bots = []; }, 120000);
-        }
+  function buildShop() {
+    const root = document.getElementById("shopItems");
+    root.innerHTML = "";
+    shopItems.forEach(item => {
+      const row = document.createElement("div");
+      row.className = "shopItem";
+      const label = document.createElement("span");
+      const swatch = document.createElement("i");
+      swatch.className = "swatch";
+      swatch.style.background = ({Green:"#00ff66",Blue:"#45a3ff",Pink:"#ff65c8",Purple:"#b18cff",Gold:"#ffcc33"})[item.name] || "#fff";
+      label.append(swatch, document.createTextNode(item.name));
+      const button = document.createElement("button");
+      button.textContent = item.cost === 0 ? "FREE" : item.cost + " Reds";
+      button.addEventListener("click", () => {
+        if (joined) socket.emit("buySkin", item.name);
+      });
+      row.append(label, button);
+      root.append(row);
+    });
+  }
 
-        function initWorld() {
-            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-            for (let i = 0; i < 400; i++) {
-                let gy = worldHeight - (i * 120) - 400;
-                if (gy > moon.y + 1000) grapplePoints.push({ x: 100 + Math.random() * 800, y: gy, radius: 25, hover: false });
-            }
-            for (let i = 0; i < 20; i++) {
-                bots.push({ x: Math.random() * worldWidth, y: worldHeight - 500 - (i * 1200), vx: 0, vy: 0, size: 18, color: "orange", reds: 10 });
-            }
-        }
+  function showToast(message) {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.style.display = "block";
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.style.display = "none", 1800);
+  }
 
-        // --- INPUTS (Directly from your Gold Script) ---
-        window.addEventListener('mousemove', e => { 
-            mouseX = e.clientX + (p.x - window.innerWidth/2); 
-            mouseY = e.clientY + cameraY; 
-        });
-        window.addEventListener('keydown', e => {
-            keys[e.code] = true;
-            if (e.code === 'Escape' && isStarted) location.reload();
-            let curH = (worldHeight - p.y) / 10;
-            if ((e.code === 'Space' || e.code === 'KeyW') && isStarted && curH < zeroGHeight) {
-                if (p.onWall && p.wallHops > 0) {
-                    p.wallHops--; p.vy = -p.jumpForce; p.vx = (p.x < worldWidth/2) ? 22 : -22; 
-                    clearTimeout(p.staminaRegenTimer);
-                    p.staminaRegenTimer = setTimeout(() => { p.wallHops = p.maxHops; }, 5000);
-                }
-            }
-        });
-        window.addEventListener('keyup', e => keys[e.code] = false);
-        window.addEventListener('mousedown', () => isMouseDown = true);
-        window.addEventListener('mouseup', () => { isMouseDown = false; p.hook.active = false; p.hook.target = null; });
+  function getMe() {
+    return players.find(p => p.id === myId) || null;
+  }
 
-        // --- CORE UPDATE (Directly from your Gold Script + Endgame Cycle) ---
-        function update() {
-            if (!isStarted || isGameOver) return;
-            let currentHeight = (worldHeight - p.y) / 10;
+  function sendInput() {
+    if (!joined || !localPlayer) return;
+    const aimX = mouse.x + cameraX;
+    const aimY = mouse.y + cameraY;
+    socket.emit("input", {
+      left: !!(keys.ArrowLeft || keys.KeyA),
+      right: !!(keys.ArrowRight || keys.KeyD),
+      jump: !!(keys.Space || keys.KeyW || keys.ArrowUp),
+      mouseDown: mouse.down,
+      aimX,
+      aimY
+    });
+  }
 
-            // Endgame Cycle
-            if (currentHeight >= 2000 && !endgameTriggered) { // Scaled 75k logic to your 30k world
-                endgameTriggered = true;
-                document.getElementById('lava-warning').style.display = 'block';
-                setTimeout(() => document.getElementById('lava-warning').style.display='none', 4000);
-            }
+  addEventListener("keydown", e => {
+    if (["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code)) e.preventDefault();
+    keys[e.code] = true;
+    if (e.code === "Escape") mouse.down = false;
+  }, { passive: false });
+  addEventListener("keyup", e => { keys[e.code] = false; });
+  canvas.addEventListener("mousemove", e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+  canvas.addEventListener("mousedown", e => { if (e.button === 0) mouse.down = true; });
+  addEventListener("mouseup", e => { if (e.button === 0) mouse.down = false; });
+  addEventListener("blur", () => { keys = {}; mouse.down = false; });
 
-            if (endgameTriggered) {
-                lavaY -= lavaSpeed; lavaSpeed += 0.001;
-                if (p.y > lavaY) p.hp -= 2; // Lava damage
-                if (p.hp < 1) { // Lava death reset
-                    p.y = worldHeight - 150; p.hp = 100; p.vx = 0; p.vy = 0;
-                }
-            }
+  restartButton.addEventListener("click", () => {
+    if (joined) socket.emit("restart");
+  });
 
-            if (currentHeight >= 2950) { // Scaled 100k logic to your moon height
-                isGameOver = true;
-                document.body.classList.add('flipped');
-                document.getElementById('end-screen').style.display = 'flex';
-            }
+  function drawCircle(x, y, r, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+  }
 
-            let gravity = (currentHeight >= zeroGHeight) ? 0 : 0.5;
-            document.getElementById('zero-g-alert').style.display = (currentHeight >= zeroGHeight) ? 'block' : 'none';
+  function draw() {
+    const w = innerWidth, h = innerHeight;
+    ctx.clearRect(0, 0, w, h);
 
-            if (keys['KeyA']) p.vx -= 0.8; if (keys['KeyD']) p.vx += 0.8;
-            if ((keys['KeyW'] || keys['Space']) && p.onGround && currentHeight < zeroGHeight) {
-                p.vy = -p.jumpForce; p.onGround = false;
-            }
+    localPlayer = getMe();
+    if (localPlayer) {
+      cameraX = localPlayer.x - w / 2;
+      cameraY = localPlayer.y - h / 2;
+      cameraX = Math.max(-w / 2 + world.width / 2, Math.min(world.width - w / 2, cameraX));
+      if (localPlayer.floating) restartButton.style.display = "block";
+      else restartButton.style.display = "none";
+      document.getElementById("height").textContent = "HEIGHT: " + localPlayer.height + "m";
+      document.getElementById("reds").textContent = "REDS: " + localPlayer.reds;
+      document.getElementById("hops").textContent = "WALL HOPS: " + localPlayer.wallHops + "/5";
+      document.getElementById("shopReds").textContent = localPlayer.reds + " Reds";
+    } else {
+      cameraX = 0;
+      cameraY = world.height - h;
+    }
 
-            p.vy += gravity;
+    const altitude = localPlayer ? Math.max(0, (world.height - localPlayer.y) / world.height) : 0;
+    const sky = ctx.createLinearGradient(0, 0, 0, h);
+    const blue = Math.max(0, 190 * (1 - altitude * 2.5));
+    sky.addColorStop(0, `rgb(${Math.floor(blue*.55)},${Math.floor(blue*.82)},${Math.floor(blue)})`);
+    sky.addColorStop(1, "#03050a");
+    ctx.fillStyle = localPlayer && localPlayer.floating ? "#070716" : sky;
+    ctx.fillRect(0, 0, w, h);
 
-            // Your exact Gold Script Hook Logic
-            if (isMouseDown && !p.hook.active) {
-                let target = grapplePoints.find(gp => gp.hover);
-                if (target) { p.hook.active = true; p.hook.target = target; p.hook.length = Math.hypot(p.x - target.x, p.y - target.y); }
-            }
-            if (p.hook.active && p.hook.target) {
-                let dx = p.x - p.hook.target.x, dy = p.y - p.hook.target.y, d = Math.hypot(dx, dy);
-                if (d > p.hook.length) {
-                    let ang = Math.atan2(dy, dx);
-                    p.x = p.hook.target.x + Math.cos(ang) * p.hook.length;
-                    p.y = p.hook.target.y + Math.sin(ang) * p.hook.length;
-                    let vR = (p.vx * dx + p.vy * dy) / d; p.vx -= (vR * dx / d); p.vy -= (vR * dy / d);
-                }
-            }
+    ctx.save();
+    ctx.translate(-cameraX, -cameraY);
 
-            p.vx *= 0.98; p.vy *= (currentHeight >= zeroGHeight) ? 0.995 : 0.99;
-            p.x += p.vx; p.y += p.vy;
+    ctx.fillStyle = "#111722";
+    ctx.fillRect(-1500, 0, 1500, world.height + 2000);
+    ctx.fillRect(world.width, 0, 1500, world.height + 2000);
+    ctx.fillStyle = "#222936";
+    ctx.fillRect(-1000, world.height, world.width + 2000, 1000);
 
-            // FIX: Repaired Gold Script Collisions (Removed wall hops during hook)
-            p.onWall = false;
-            if (p.x < p.size) { p.x = p.size; p.vx = 0; if(!p.hook.active) p.onWall = true; }
-            if (p.x > worldWidth - p.size) { p.x = worldWidth - p.size; p.vx = 0; if(!p.hook.active) p.onWall = true; }
-            p.onGround = false;
-            if (p.y > worldHeight - p.size) { p.y = worldHeight - p.size; p.vy = 0; p.onGround = true; }
+    grapplePoints.forEach(point => {
+      const sx = point.x - cameraX, sy = point.y - cameraY;
+      if (sx < -50 || sx > w + 50 || sy < -50 || sy > h + 50) return;
+      drawCircle(point.x, point.y, point.radius, "#ff6500");
+      if (Math.hypot(mouse.x - sx, mouse.y - sy) < 150) {
+        ctx.strokeStyle = "#ffe66b";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(point.x, point.y, point.radius + 6, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    });
 
-            // Bot interaction (Ghost Bots - no collision, just collect Reds)
-            bots.forEach(b => {
-                if (Math.hypot(p.x - b.x, p.y - b.y) < p.size + b.size && b.reds > 0) {
-                    window.gameReds += b.reds; b.reds = 0; b.color = '#555';
-                    document.getElementById('r-count-hud').innerText = `REDS: ${window.gameReds}`;
-                }
-            });
+    bots.forEach(bot => {
+      drawCircle(bot.x, bot.y, 18, "#ff9d00");
+      ctx.fillStyle = "#1a1200";
+      ctx.font = "bold 10px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText("+10", bot.x, bot.y + 3);
+    });
 
-            grapplePoints.forEach(gp => {
-                gp.hover = Math.hypot(mouseX - gp.x, mouseY - gp.y) < 150;
-                if (Math.hypot(p.x - gp.x, p.y - gp.y) < p.size + gp.radius) {
-                    if (p.vy > 0 && p.y < gp.y) p.onGround = true;
-                    let ang = Math.atan2(p.y - gp.y, p.x - gp.x);
-                    p.x = gp.x + Math.cos(ang) * (p.size + gp.radius); p.y = gp.y + Math.sin(ang) * (p.size + gp.radius);
-                    p.vx *= 0.5; p.vy *= 0.5;
-                }
-            });
+    // The Moon is the finish landmark. There is no lava or endgame hazard.
+    drawCircle(world.moon.x, world.moon.y, world.moon.radius, "#e8edf5");
+    drawCircle(world.moon.x - 130, world.moon.y - 80, 65, "#cbd2df");
+    drawCircle(world.moon.x + 145, world.moon.y + 95, 90, "#cbd2df");
+    drawCircle(world.moon.x + 35, world.moon.y - 190, 45, "#cbd2df");
 
-            cameraY = p.y - window.innerHeight / 2;
+    players.forEach(p => {
+      if (p.hook) {
+        ctx.strokeStyle = p.id === myId ? "#fff" : "#80d8ff";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.hook.x, p.hook.y);
+        ctx.stroke();
+      }
+      drawCircle(p.x, p.y, p.size, p.color || "#00ff66");
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 13px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(p.name, p.x, p.y - 27);
+    });
 
-            // Sync
-            if (!soloMode && peer && peer.id) {
-                let data = { type: 'sync', id: peer.id, x: p.x, y: p.y, name: p.name, h: Math.floor(currentHeight) };
-                Object.values(connections).forEach(c => c.send(data));
-                players[peer.id] = data;
-            }
+    ctx.restore();
 
-            // HUD Update (Directly from Gold Script)
-            document.getElementById('h-count').innerText = `HEIGHT: ${Math.max(0, Math.floor(currentHeight))}m`;
-            document.getElementById('hp-count').innerText = `HP: ${Math.floor(p.hp)}/100`;
-            document.getElementById('meter-fill').style.height = Math.min(100, (currentHeight / 3000) * 100) + "%";
-            document.getElementById('s-text').innerText = `WALL-HOPS: ${p.wallHops}/5`;
-            document.getElementById('stamina-fill').style.width = (p.wallHops / 5 * 100) + "%";
-        }
+    // Leaderboard stays in its own top-right panel, away from the HUD.
+    const sorted = [...players].sort((a, b) => b.height - a.height).slice(0, 7);
+    const leaderRows = document.getElementById("leaderRows");
+    if (!sorted.length) {
+      leaderRows.textContent = "Waiting for players...";
+    } else {
+      leaderRows.innerHTML = "";
+      sorted.forEach((p, i) => {
+        const row = document.createElement("div");
+        row.className = "leaderRow";
+        const name = document.createElement("span");
+        name.textContent = (i + 1) + ". " + p.name + (p.id === myId ? " (you)" : "");
+        const height = document.createElement("span");
+        height.textContent = p.height + "m";
+        row.append(name, height);
+        leaderRows.append(row);
+      });
+    }
 
-        // --- DRAW LOOP (Directly from Gold Script + Multilayer) ---
-        function draw() {
-            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-            let currentHeight = (worldHeight - p.y) / 10;
-            
-            // Sky Logic from Gold Script
-            let sky = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            let alt = (worldHeight - p.y) / worldHeight;
-            let skyR = Math.max(0, 135 * (1 - alt * 2.5));
-            let skyG = Math.max(0, 206 * (1 - alt * 2.5));
-            let skyB = Math.max(0, 235 * (1 - alt * 2.5));
-            sky.addColorStop(0, `rgb(${skyR}, ${skyG}, ${skyB})`); sky.addColorStop(1, "#000");
-            
-            ctx.fillStyle = endgameTriggered ? "#300" : sky; // Red sky during endgame
-            ctx.fillRect(0,0, canvas.width, canvas.height);
+    sendInput();
+    requestAnimationFrame(draw);
+  }
 
-            ctx.save(); ctx.translate(-(p.x - canvas.width/2), -cameraY);
-            ctx.fillStyle = "#111"; ctx.fillRect(-wallThickness, 0, wallThickness, worldHeight + 1000); ctx.fillRect(worldWidth, 0, wallThickness, worldHeight + 1000);
-            
-            // Ground Logic from Gold Script
-            ctx.fillStyle = "#222"; ctx.fillRect(-1000, worldHeight, 3000, 1000);
-            
-            bots.forEach(b => { ctx.fillStyle = b.color; ctx.beginPath(); ctx.arc(b.x, b.y, b.size, 0, 7); ctx.fill(); });
-            grapplePoints.forEach(gp => { if (gp.hover) { ctx.strokeStyle = "yellow"; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(gp.x, gp.y, gp.radius+5, 0, 7); ctx.stroke(); } ctx.fillStyle = "#ff5500"; ctx.beginPath(); ctx.arc(gp.x, gp.y, gp.radius, 0, 7); ctx.fill(); });
-            
-            // Moon/Mars from Gold Script
-            ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(moon.x, moon.y, moon.radius, 0, 7); ctx.fill();
-            
-            if (p.hook.active) { ctx.strokeStyle = "#fff"; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.hook.target.x, p.hook.target.y); ctx.stroke(); }
-            
-            // RULE: Draw Other Players as Green
-            Object.values(players).forEach(pl => {
-                ctx.fillStyle = "#00ff00"; // RULE: All green
-                ctx.beginPath(); ctx.arc(pl.x, pl.y, 18, 0, 7); ctx.fill();
-                ctx.fillStyle = "#fff"; ctx.fillText(pl.name, pl.x - 20, pl.y - 28);
-            });
-            
-            // Self
-            ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, 7); ctx.fill();
-            ctx.fillStyle = "#fff"; ctx.font = "bold 14px Arial"; ctx.fillText(p.name, p.x - 20, p.y - 28);
-
-            // Lava
-            ctx.fillStyle = "rgba(255, 68, 0, 0.8)";
-            ctx.fillRect(-1000, lavaY, 3000, 5000);
-
-            ctx.restore();
-        }
-
-        function animate() { update(); draw(); requestAnimationFrame(animate); }
-        animate();
-    })();
-    </script>
+  draw();
+})();
+</script>
 </body>
 </html>
