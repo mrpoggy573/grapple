@@ -1,3 +1,4 @@
+
 const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
@@ -18,15 +19,12 @@ const io = new Server(server, {
 
 const PORT = process.env.PORT || 3000;
 const TICK_RATE = 30;
+const DT = 1 / TICK_RATE;
 
 const WORLD = {
   width: 1000,
   height: 30000,
   moon: { x: 500, y: 1500, radius: 500 }
-};
-
-const COLORS = {
-  Green: "#00ff66"
 };
 
 const GRAPPLE_UPGRADES = [
@@ -42,12 +40,6 @@ const ALLOWED_PATTERNS = [
   "Diagonal",
   "Hexagon"
 ];
-
-function getNextGrappleUpgrade(p) {
-  return GRAPPLE_UPGRADES.find(
-    upgrade => upgrade.multiplier > p.grappleMultiplier
-  ) || null;
-}
 
 const grapplePoints = [];
 
@@ -88,6 +80,12 @@ function cleanName(value) {
   return name || "Player";
 }
 
+function getNextGrappleUpgrade(p) {
+  return GRAPPLE_UPGRADES.find(
+    upgrade => upgrade.multiplier > p.grappleMultiplier
+  ) || null;
+}
+
 function makePlayer(id, name) {
   return {
     id,
@@ -100,7 +98,7 @@ function makePlayer(id, name) {
     vy: 0,
     size: 18,
 
-    color: COLORS.Green,
+    color: "#00ff66",
     pattern: "Solid",
 
     grappleMultiplier: 1,
@@ -112,7 +110,6 @@ function makePlayer(id, name) {
 
     onGround: false,
     onWall: false,
-
     hook: null,
 
     input: {
@@ -125,7 +122,6 @@ function makePlayer(id, name) {
     },
 
     wasJumping: false,
-
     reachedMoon: false,
     floating: false,
     bestHeight: 0
@@ -152,7 +148,6 @@ function resetPlayer(p) {
 
   p.onGround = false;
   p.onWall = false;
-
   p.hook = null;
 
   p.reachedMoon = false;
@@ -168,13 +163,10 @@ function getPublicPlayer(p) {
   return {
     id: p.id,
     name: p.name,
-
     x: p.x,
     y: p.y,
-
     vx: p.vx,
     vy: p.vy,
-
     size: p.size,
 
     color: p.color,
@@ -232,9 +224,10 @@ function handleInput(socket, data) {
     let nearestDistance = 150;
 
     for (const point of grapplePoints) {
-      const dx = point.x - p.input.aimX;
-      const dy = point.y - p.input.aimY;
-      const distance = Math.hypot(dx, dy);
+      const distance = Math.hypot(
+        point.x - p.input.aimX,
+        point.y - p.input.aimY
+      );
 
       if (distance < nearestDistance) {
         nearest = point;
@@ -302,6 +295,20 @@ io.on("connection", socket => {
     handleInput(socket, data);
   });
 
+  socket.on("setName", data => {
+    const p = players.get(socket.id);
+
+    if (!p) {
+      return;
+    }
+
+    const newName = cleanName(data);
+
+    p.name = newName;
+
+    socket.emit("notice", "Name changed to " + newName + ".");
+  });
+
   socket.on("setAppearance", data => {
     const p = players.get(socket.id);
 
@@ -331,10 +338,7 @@ io.on("connection", socket => {
     const upgrade = getNextGrappleUpgrade(p);
 
     if (!upgrade) {
-      socket.emit(
-        "notice",
-        "Grapple length is already at 2x."
-      );
+      socket.emit("notice", "Grapple length is already at 2x.");
       return;
     }
 
@@ -348,7 +352,7 @@ io.on("connection", socket => {
 
     socket.emit(
       "notice",
-      `Grapple length upgraded to ${upgrade.multiplier}x!`
+      "Grapple length upgraded to " + upgrade.multiplier + "x!"
     );
   });
 
@@ -394,7 +398,9 @@ function updatePlayer(p, now) {
   }
 
   const zeroGravity = currentHeight >= 2235;
-  const gravity = zeroGravity ? 0 : 0.5;
+
+  const gravity = zeroGravity ? 0 : 0.65;
+  const maxFallSpeed = zeroGravity ? 8 : 18;
 
   if (p.input.left) {
     p.vx -= 0.8;
@@ -426,7 +432,7 @@ function updatePlayer(p, now) {
 
   p.wasJumping = p.input.jump;
 
-  p.vy += gravity;
+  p.vy = Math.min(p.vy + gravity, maxFallSpeed);
 
   if (p.hook) {
     const dx = p.x - p.hook.x;
@@ -440,8 +446,7 @@ function updatePlayer(p, now) {
       p.x = p.hook.x + nx * p.hook.length;
       p.y = p.hook.y + ny * p.hook.length;
 
-      const radialVelocity =
-        p.vx * nx + p.vy * ny;
+      const radialVelocity = p.vx * nx + p.vy * ny;
 
       p.vx -= radialVelocity * nx;
       p.vy -= radialVelocity * ny;
@@ -449,7 +454,7 @@ function updatePlayer(p, now) {
   }
 
   p.vx *= 0.98;
-  p.vy *= zeroGravity ? 0.995 : 0.99;
+  p.vy *= zeroGravity ? 0.995 : 0.995;
 
   p.x += p.vx;
   p.y += p.vy;
@@ -565,7 +570,5 @@ app.get("/health", (_req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(
-    `grapple is running at http://localhost:${PORT}`
-  );
+  console.log("grapple is running at http://localhost:" + PORT);
 });
