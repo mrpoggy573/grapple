@@ -34,6 +34,14 @@ const GRAPPLE_UPGRADES = [
   { multiplier: 2, cost: 50 }
 ];
 
+const SHOP_ITEMS = [
+  { name: "Green", cost: 0, color: "#00ff66" },
+  { name: "Blue", cost: 10, color: "#45a3ff" },
+  { name: "Pink", cost: 20, color: "#ff65c8" },
+  { name: "Purple", cost: 35, color: "#b18cff" },
+  { name: "Gold", cost: 50, color: "#ffcc33" }
+];
+
 const ALLOWED_PATTERNS = [
   "Solid",
   "Horizontal",
@@ -44,16 +52,20 @@ const ALLOWED_PATTERNS = [
 const grapplePoints = [];
 
 for (let i = 0; i < 400; i++) {
-  const y = WORLD.height - i * 120 - 400;
+  const y = WORLD.height - 350 - i * 120;
 
-  if (y > WORLD.moon.y + WORLD.moon.radius + 300) {
-    grapplePoints.push({
-      id: i,
-      x: 100 + Math.random() * 800,
-      y,
-      radius: 25
-    });
+  if (y <= WORLD.moon.y + WORLD.moon.radius + 300) {
+    break;
   }
+
+  const x = 100 + ((i * 197 + 83) % 800);
+
+  grapplePoints.push({
+    id: i,
+    x,
+    y,
+    radius: 25
+  });
 }
 
 const bots = [];
@@ -61,7 +73,7 @@ const bots = [];
 for (let i = 0; i < 20; i++) {
   bots.push({
     id: i,
-    x: 60 + Math.random() * 880,
+    x: 60 + ((i * 173 + 61) % 880),
     y: WORLD.height - 500 - i * 1200,
     reds: 10,
     taken: false
@@ -154,8 +166,11 @@ function resetPlayer(p) {
   p.floating = false;
   p.bestHeight = 0;
 
+  p.input.left = false;
+  p.input.right = false;
   p.input.jump = false;
   p.input.mouseDown = false;
+
   p.wasJumping = false;
 }
 
@@ -275,13 +290,20 @@ io.on("connection", socket => {
       id: socket.id,
       world: WORLD,
       grapplePoints,
+      shop: SHOP_ITEMS.map(item => ({
+        name: item.name,
+        cost: item.cost
+      })),
 
       players: Array.from(
         players.values(),
         getPublicPlayer
       ),
 
-      bots: bots.map(bot => ({ ...bot })),
+      bots: bots
+        .filter(bot => !bot.taken)
+        .map(bot => ({ ...bot })),
+
       tickRate: TICK_RATE
     });
 
@@ -303,7 +325,6 @@ io.on("connection", socket => {
     }
 
     const newName = cleanName(data);
-
     p.name = newName;
 
     socket.emit("notice", "Name changed to " + newName + ".");
@@ -326,6 +347,36 @@ io.on("connection", socket => {
     if (ALLOWED_PATTERNS.includes(data.pattern)) {
       p.pattern = data.pattern;
     }
+  });
+
+  socket.on("buySkin", name => {
+    const p = players.get(socket.id);
+
+    if (!p) {
+      return;
+    }
+
+    const item = SHOP_ITEMS.find(skin => skin.name === name);
+
+    if (!item) {
+      socket.emit("notice", "That skin does not exist.");
+      return;
+    }
+
+    if (p.color === item.color) {
+      socket.emit("notice", "You already have this skin equipped.");
+      return;
+    }
+
+    if (p.reds < item.cost) {
+      socket.emit("notice", "Not enough Reds.");
+      return;
+    }
+
+    p.reds -= item.cost;
+    p.color = item.color;
+
+    socket.emit("notice", item.name + " skin equipped!");
   });
 
   socket.on("buyGrappleUpgrade", () => {
@@ -398,7 +449,6 @@ function updatePlayer(p, now) {
   }
 
   const zeroGravity = currentHeight >= 2235;
-
   const gravity = zeroGravity ? 0 : 0.65;
   const maxFallSpeed = zeroGravity ? 8 : 18;
 
@@ -454,7 +504,7 @@ function updatePlayer(p, now) {
   }
 
   p.vx *= 0.98;
-  p.vy *= zeroGravity ? 0.995 : 0.995;
+  p.vy *= 0.995;
 
   p.x += p.vx;
   p.y += p.vy;
@@ -561,14 +611,20 @@ setInterval(() => {
   }
 
   io.emit("state", snapshot());
-}, 1000 / TICK_RATE);
+}, DT * 1000);
 
 app.use(express.static("public"));
 
 app.get("/health", (_req, res) => {
-  res.json({ ok: true });
+  res.json({
+    ok: true,
+    players: players.size,
+    grapplePoints: grapplePoints.length,
+    bots: bots.filter(bot => !bot.taken).length
+  });
 });
 
 server.listen(PORT, () => {
   console.log("grapple is running at http://localhost:" + PORT);
+  console.log("Grapple points:", grapplePoints.length);
 });
