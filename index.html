@@ -835,9 +835,9 @@ label {
 
   function drawMoon() {
     const moon = gameState && gameState.moon;
-    const x = Number(moon && moon.x ?? 500);
-    const y = Number(moon && moon.y ?? 1500);
-    const radius = Number(moon && (moon.radius ?? moon.r) ?? 500);
+    const x = Number((moon && moon.x) ?? 500);
+    const y = Number((moon && moon.y) ?? 1500);
+    const radius = Number((moon && (moon.radius ?? moon.r)) ?? 500);
     if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(radius)) return;
 
     const sx = worldToScreenX(x);
