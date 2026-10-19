@@ -6,471 +6,400 @@ const { Server } = require("socket.io");
 const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
-  cors: { origin: "*" }
+  cors: {
+    origin: ["https://mrpoggy573.github.io", "http://localhost:3000", "http://127.0.0.1:3000"],
+    methods: ["GET", "POST"]
+  }
 });
 
 const PORT = process.env.PORT || 3000;
+const TICK_RATE = 30;
+const DT = 1 / TICK_RATE;
 
-const WORLD_WIDTH = 1000;
-const START_Y = 10;
-const POINT_SPACING_MIN = 100;
-const POINT_SPACING_MAX = 180;
-const POINTS_AHEAD = 3500;
-const POINTS_BEHIND = 700;
-const PLAYER_SPEED = 260;
-const GRAPPLE_RANGE = 650;
-const WALL_HOP_FORCE = 420;
-const MAX_WALL_HOPS = 5;
+const WORLD = {
+  width: 1000,
+  height: 30000,
+  moon: { x: 500, y: 1500, radius: 500 }
+};
 
-const SHOP_ITEMS = [
-  { id: "green", name: "Green", color: "#55ff77", cost: 0 },
-  { id: "blue", name: "Blue", color: "#55aaff", cost: 10 },
-  { id: "pink", name: "Pink", color: "#ff66cc", cost: 20 },
-  { id: "purple", name: "Purple", color: "#bb66ff", cost: 35 },
-  { id: "gold", name: "Gold", color: "#ffcc33", cost: 50 }
+const GRAPPLE_UPGRADES = [
+  { multiplier: 1.25, cost: 10 },
+  { multiplier: 1.5, cost: 20 },
+  { multiplier: 1.75, cost: 35 },
+  { multiplier: 2, cost: 50 }
 ];
 
+const ALLOWED_PATTERNS = ["Solid", "Horizontal", "Diagonal", "Hexagon"];
+
+function getNextGrappleUpgrade(p) {
+  return GRAPPLE_UPGRADES.find(u => u.multiplier > p.grappleMultiplier) || null;
+}
+
+const grapplePoints = [];
+for (let i = 0; i < 400; i++) {
+  const y = WORLD.height - i * 120 - 400;
+  if (y > WORLD.moon.y + WORLD.moon.radius + 300) {
+    grapplePoints.push({ id: i, x: 100 + Math.random() * 800, y, radius: 25 });
+  }
+}
+
+const bots = [];
+for (let i = 0; i < 20; i++) {
+  bots.push({ id: i, x: 60 + Math.random() * 880, y: WORLD.height - 500 - i * 1200, reds: 10, taken: false });
+}
+
 const players = new Map();
-const grapplePoints = new Map();
-const bots = new Map();
-let nextPointId = 1;
-let nextBotId = 1;
-let worldSeed = Math.floor(Math.random() * 2147483647);
 
-function randomBetween(min, max) {
-  return min + Math.random() * (max - min);
+function cleanName(value) {
+  const name = String(value || "Player")
+    .replace(/[<>]/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 16);
+  return name || "Player";
 }
 
-function hashRandom(seed) {
-  let value = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
-  return value - Math.floor(value);
-}
-
-function getPointX(index) {
-  return 60 + hashRandom(index + worldSeed) * (WORLD_WIDTH - 120);
-}
-
-function getPointY(index) {
-  let y = START_Y;
-  for (let i = 0; i < index; i++) {
-    y += POINT_SPACING_MIN +
-      hashRandom(i + worldSeed * 0.01) *
-      (POINT_SPACING_MAX - POINT_SPACING_MIN);
-  }
-  return y;
-}
-
-function getPointIndexAtY(targetY) {
-  let y = START_Y;
-  let index = 0;
-
-  while (y < targetY && index < 1000000) {
-    y += POINT_SPACING_MIN +
-      hashRandom(index + worldSeed * 0.01) *
-      (POINT_SPACING_MAX - POINT_SPACING_MIN);
-    index++;
-  }
-
-  return index;
-}
-
-function ensurePointsAround(y) {
-  const firstIndex = Math.max(0, getPointIndexAtY(Math.max(START_Y, y - POINTS_BEHIND)) - 3);
-  const lastIndex = getPointIndexAtY(y + POINTS_AHEAD) + 3;
-
-  for (let index = firstIndex; index <= lastIndex; index++) {
-    const id = `point_${index}`;
-
-    if (!grapplePoints.has(id)) {
-      grapplePoints.set(id, {
-        id,
-        x: getPointX(index),
-        y: getPointY(index),
-        radius: 12
-      });
-    }
-  }
-
-  for (const [id, point] of grapplePoints) {
-    if (point.y < y - POINTS_BEHIND - 1000) {
-      grapplePoints.delete(id);
-    }
-  }
-}
-
-function createPlayer(socket) {
+function makePlayer(id, name) {
   return {
-    id: socket.id,
-    name: `Player ${players.size + 1}`,
-    x: WORLD_WIDTH / 2,
-    y: START_Y,
-    vx: 0,
-    vy: PLAYER_SPEED,
-    color: "#55ff77",
-    reds: 10,
-    wins: 0,
-    height: 0,
-    wallHops: MAX_WALL_HOPS,
-    maxWallHops: MAX_WALL_HOPS,
-    grappleUpgrade: 1,
-    grappling: false,
-    grappleTarget: null,
-    lastUpdate: Date.now()
-  };
-}
-
-function publicPlayer(player) {
-  return {
-    id: player.id,
-    name: player.name,
-    x: player.x,
-    y: player.y,
-    vx: player.vx,
-    vy: player.vy,
-    color: player.color,
-    reds: player.reds,
-    wins: player.wins,
-    height: Math.max(0, Math.floor(player.y - START_Y)),
-    wallHops: player.wallHops,
-    maxWallHops: player.maxWallHops,
-    grappling: player.grappling,
-    grappleTarget: player.grappleTarget
-  };
-}
-
-function nearestPoint(player, targetId) {
-  if (targetId && grapplePoints.has(targetId)) {
-    const point = grapplePoints.get(targetId);
-    const distance = Math.hypot(point.x - player.x, point.y - player.y);
-    if (distance <= GRAPPLE_RANGE * player.grappleUpgrade) return point;
-    return null;
-  }
-
-  let nearest = null;
-  let nearestDistance = Infinity;
-
-  for (const point of grapplePoints.values()) {
-    const distance = Math.hypot(point.x - player.x, point.y - player.y);
-
-    if (
-      distance < nearestDistance &&
-      distance <= GRAPPLE_RANGE * player.grappleUpgrade
-    ) {
-      nearest = point;
-      nearestDistance = distance;
-    }
-  }
-
-  return nearest;
-}
-
-function startGrapple(player, targetId) {
-  const point = nearestPoint(player, targetId);
-
-  if (!point) {
-    player.grappling = false;
-    player.grappleTarget = null;
-    return false;
-  }
-
-  player.grappling = true;
-  player.grappleTarget = point.id;
-
-  const dx = point.x - player.x;
-  const dy = point.y - player.y;
-  const distance = Math.max(1, Math.hypot(dx, dy));
-
-  player.vx = (dx / distance) * 180;
-  player.vy = Math.max(PLAYER_SPEED, (dy / distance) * 320);
-
-  return true;
-}
-
-function stopGrapple(player) {
-  player.grappling = false;
-  player.grappleTarget = null;
-}
-
-function spawnBot() {
-  const id = `bot_${nextBotId++}`;
-
-  bots.set(id, {
     id,
-    name: `Bot ${nextBotId}`,
-    x: randomBetween(100, WORLD_WIDTH - 100),
-    y: START_Y + randomBetween(50, 400),
-    color: "#ff5555",
-    vx: randomBetween(-40, 40),
-    vy: PLAYER_SPEED
-  });
-}
-
-function getStateForPlayer(player) {
-  ensurePointsAround(player.y);
-
-  const nearbyPoints = [...grapplePoints.values()]
-    .filter(point =>
-      point.y >= player.y - POINTS_BEHIND &&
-      point.y <= player.y + POINTS_AHEAD
-    );
-
-  const nearbyBots = [...bots.values()]
-    .filter(bot => Math.abs(bot.y - player.y) < POINTS_AHEAD)
-    .map(bot => ({ ...bot }));
-
-  return {
-    players: [...players.values()].map(publicPlayer),
-    grapplePoints: nearbyPoints,
-    bots: nearbyBots,
-    moon: { x: WORLD_WIDTH / 2, y: 30000, radius: 500 },
-    world: { width: WORLD_WIDTH, startY: START_Y },
-    shop: SHOP_ITEMS
+    name: cleanName(name),
+    x: WORLD.width / 2,
+    y: WORLD.height - 150,
+    vx: 0,
+    vy: 0,
+    size: 18,
+    color: "#00ff66",
+    pattern: "Solid",
+    grappleMultiplier: 1,
+    reds: 10,
+    hp: 100,
+    wallHops: 5,
+    hopResetAt: 0,
+    onGround: false,
+    onWall: false,
+    hook: null,
+    input: { left: false, right: false, jump: false, mouseDown: false, aimX: 500, aimY: 1000 },
+    wasJumping: false,
+    reachedMoon: false,
+    floating: false,
+    bestHeight: 0
   };
 }
 
-function broadcastState() {
-  for (const player of players.values()) {
-    const socket = io.sockets.sockets.get(player.id);
-    if (!socket) continue;
-    socket.emit("state", getStateForPlayer(player));
+function heightOf(p) {
+  return Math.max(0, Math.floor((WORLD.height - p.y) / 10));
+}
+
+function resetPlayer(p) {
+  p.x = WORLD.width / 2;
+  p.y = WORLD.height - 150;
+  p.vx = 0;
+  p.vy = 0;
+  p.hp = 100;
+  p.wallHops = 5;
+  p.hopResetAt = 0;
+  p.onGround = false;
+  p.onWall = false;
+  p.hook = null;
+  p.reachedMoon = false;
+  p.floating = false;
+  p.bestHeight = 0;
+  p.input.jump = false;
+  p.input.mouseDown = false;
+  p.wasJumping = false;
+}
+
+function getPublicPlayer(p) {
+  return {
+    id: p.id,
+    name: p.name,
+    x: p.x,
+    y: p.y,
+    vx: p.vx,
+    vy: p.vy,
+    size: p.size,
+    color: p.color,
+    pattern: p.pattern,
+    grappleMultiplier: p.grappleMultiplier,
+    grappleUpgradeCost: getNextGrappleUpgrade(p)?.cost ?? null,
+    reds: p.reds,
+    hp: p.hp,
+    wallHops: p.wallHops,
+    height: heightOf(p),
+    bestHeight: p.bestHeight,
+    reachedMoon: p.reachedMoon,
+    floating: p.floating,
+    hook: p.hook ? { x: p.hook.x, y: p.hook.y } : null
+  };
+}
+
+function handleInput(socket, data) {
+  const p = players.get(socket.id);
+  if (!p || !data || typeof data !== "object") return;
+
+  p.input.left = data.left === true;
+  p.input.right = data.right === true;
+  p.input.jump = data.jump === true;
+
+  if (Number.isFinite(data.aimX) && Number.isFinite(data.aimY)) {
+    p.input.aimX = Math.max(-10000, Math.min(WORLD.width + 10000, data.aimX));
+    p.input.aimY = Math.max(-10000, Math.min(WORLD.height + 10000, data.aimY));
   }
+
+  const mouseDown = data.mouseDown === true;
+  if (mouseDown && !p.input.mouseDown) {
+    let nearest = null;
+    let nearestDistance = 150;
+
+    for (const point of grapplePoints) {
+      const distance = Math.hypot(
+        point.x - p.input.aimX,
+        point.y - p.input.aimY
+      );
+
+      if (distance < nearestDistance) {
+        nearest = point;
+        nearestDistance = distance;
+      }
+    }
+
+    if (nearest) {
+      const distance = Math.hypot(p.x - nearest.x, p.y - nearest.y);
+
+      if (distance < 900 * p.grappleMultiplier) {
+        p.hook = {
+          x: nearest.x,
+          y: nearest.y,
+          length: distance
+        };
+      }
+    }
+  }
+
+  if (!mouseDown) p.hook = null;
+  p.input.mouseDown = mouseDown;
 }
 
 io.on("connection", socket => {
-  const player = createPlayer(socket);
-  players.set(socket.id, player);
-  ensurePointsAround(START_Y);
+  socket.on("join", data => {
+    if (players.has(socket.id)) return;
 
-  socket.emit("init", {
-    ...getStateForPlayer(player),
-    selfId: socket.id,
-    shop: SHOP_ITEMS
-  });
+    const p = makePlayer(socket.id, data && data.name);
+    players.set(socket.id, p);
 
-  socket.broadcast.emit("playerJoined", publicPlayer(player));
-
-  socket.on("move", data => {
-    const current = players.get(socket.id);
-    if (!current || !data) return;
-
-    if (Number.isFinite(data.x)) {
-      current.x = Math.max(25, Math.min(WORLD_WIDTH - 25, data.x));
-    }
-
-    if (Number.isFinite(data.vx)) {
-      current.vx = Math.max(-PLAYER_SPEED * 2, Math.min(PLAYER_SPEED * 2, data.vx));
-    }
-
-    if (Number.isFinite(data.vy)) {
-      current.vy = Math.max(PLAYER_SPEED, data.vy);
-    }
-
-    if (Number.isFinite(data.y) && data.y > current.y) {
-      current.y = data.y;
-    }
-
-    current.height = Math.max(0, Math.floor(current.y - START_Y));
-    ensurePointsAround(current.y);
-  });
-
-  socket.on("grapple", data => {
-    const current = players.get(socket.id);
-    if (!current) return;
-
-    const targetId = data && typeof data === "object" ? data.targetId : data;
-    startGrapple(current, targetId);
-    socket.emit("grappleResult", {
-      success: current.grappling,
-      targetId: current.grappleTarget
+    socket.emit("init", {
+      id: socket.id,
+      world: WORLD,
+      grapplePoints,
+      players: Array.from(players.values(), getPublicPlayer),
+      bots: bots.filter(bot => !bot.taken).map(bot => ({ ...bot })),
+      tickRate: TICK_RATE
     });
+
+    socket.broadcast.emit("playerJoined", getPublicPlayer(p));
   });
 
-  socket.on("releaseGrapple", () => {
-    const current = players.get(socket.id);
-    if (current) stopGrapple(current);
-  });
+  socket.on("input", data => handleInput(socket, data));
 
-  socket.on("wallHop", data => {
-    const current = players.get(socket.id);
-    if (!current || current.wallHops <= 0) return;
+  socket.on("setAppearance", data => {
+    const p = players.get(socket.id);
+    if (!p || !data || typeof data !== "object") return;
 
-    const direction = data && Number.isFinite(data.direction)
-      ? Math.sign(data.direction)
-      : (current.x < WORLD_WIDTH / 2 ? 1 : -1);
-
-    current.vx = direction * PLAYER_SPEED * 1.2;
-    current.vy = Math.max(current.vy, WALL_HOP_FORCE);
-    current.wallHops--;
-    socket.emit("wallHopResult", { wallHops: current.wallHops });
-  });
-
-  socket.on("resetWallHops", () => {
-    const current = players.get(socket.id);
-    if (current) current.wallHops = current.maxWallHops;
-  });
-
-  socket.on("buySkin", data => {
-    const current = players.get(socket.id);
-    if (!current || !data) return;
-
-    const item = SHOP_ITEMS.find(entry => entry.id === data.id);
-    if (!item || current.reds < item.cost) {
-      socket.emit("shopResult", { success: false, message: "Not enough Reds!" });
-      return;
+    if (typeof data.color === "string" && /^#[0-9a-fA-F]{6}$/.test(data.color)) {
+      p.color = data.color;
     }
 
-    current.reds -= item.cost;
-    current.color = item.color;
+    if (ALLOWED_PATTERNS.includes(data.pattern)) {
+      p.pattern = data.pattern;
+    }
+  });
 
-    socket.emit("shopResult", {
-      success: true,
-      message: `Equipped ${item.name}!`,
-      reds: current.reds,
-      color: current.color
-    });
+  socket.on("setName", value => {
+    const p = players.get(socket.id);
+    if (!p) return;
+
+    p.name = cleanName(value);
+    socket.emit("notice", `Name changed to ${p.name}.`);
   });
 
   socket.on("buyGrappleUpgrade", () => {
-    const current = players.get(socket.id);
-    if (!current) return;
+    const p = players.get(socket.id);
+    if (!p) return;
 
-    const cost = Math.floor(25 * current.grappleUpgrade);
+    const upgrade = getNextGrappleUpgrade(p);
 
-    if (current.reds < cost) {
-      socket.emit("shopResult", { success: false, message: "Not enough Reds!" });
+    if (!upgrade) {
+      socket.emit("notice", "Grapple length is already at 2x.");
       return;
     }
 
-    current.reds -= cost;
-    current.grappleUpgrade = Math.min(5, current.grappleUpgrade + 1);
-
-    socket.emit("shopResult", {
-      success: true,
-      message: `Grapple range upgraded to ${current.grappleUpgrade}x!`,
-      reds: current.reds,
-      grappleUpgrade: current.grappleUpgrade
-    });
-  });
-
-  socket.on("collectRed", data => {
-    const current = players.get(socket.id);
-    if (!current || !data || !data.id) return;
-
-    const bot = bots.get(data.id);
-    if (!bot) return;
-
-    if (Math.hypot(bot.x - current.x, bot.y - current.y) < 60) {
-      current.reds += 1;
-      bots.delete(data.id);
-      socket.emit("redCollected", { reds: current.reds });
+    if (p.reds < upgrade.cost) {
+      socket.emit("notice", "Not enough Reds.");
+      return;
     }
-  });
 
-  socket.on("setName", name => {
-    const current = players.get(socket.id);
-    if (!current || typeof name !== "string") return;
+    p.reds -= upgrade.cost;
+    p.grappleMultiplier = upgrade.multiplier;
 
-    current.name = name.trim().slice(0, 20) || `Player ${players.size}`;
-  });
-
-  socket.on("setAppearance", data => {
-    const current = players.get(socket.id);
-    if (!current || !data) return;
-
-    if (typeof data.color === "string" && /^#[0-9a-f]{6}$/i.test(data.color)) {
-      current.color = data.color;
-    }
+    socket.emit("notice", `Grapple length upgraded to ${upgrade.multiplier}x!`);
   });
 
   socket.on("restart", () => {
-    const current = players.get(socket.id);
-    if (!current) return;
-
-    current.x = WORLD_WIDTH / 2;
-    current.y = START_Y;
-    current.vx = 0;
-    current.vy = PLAYER_SPEED;
-    current.height = 0;
-    current.wallHops = current.maxWallHops;
-    stopGrapple(current);
-
-    ensurePointsAround(START_Y);
-
-    socket.emit("restarted", {
-      x: current.x,
-      y: current.y,
-      wallHops: current.wallHops
-    });
+    const p = players.get(socket.id);
+    if (p) resetPlayer(p);
   });
 
   socket.on("disconnect", () => {
     players.delete(socket.id);
-    socket.broadcast.emit("playerLeft", socket.id);
+    io.emit("playerLeft", socket.id);
   });
 });
+
+function updatePlayer(p, now) {
+  const currentHeight = heightOf(p);
+
+  if (currentHeight > p.bestHeight) {
+    p.bestHeight = currentHeight;
+  }
+
+  if (p.floating) {
+    p.vx *= 0.94;
+    p.vy = -3;
+    p.x += p.vx;
+    p.y += p.vy;
+    p.x = Math.max(p.size, Math.min(WORLD.width - p.size, p.x));
+    return;
+  }
+
+  if (p.hopResetAt && now >= p.hopResetAt) {
+    p.wallHops = 5;
+    p.hopResetAt = 0;
+  }
+
+  const zeroGravity = currentHeight >= 2235;
+  const gravity = zeroGravity ? 0 : 0.56;
+  const maxFallSpeed = 18;
+
+  if (p.input.left) p.vx -= 0.8;
+  if (p.input.right) p.vx += 0.8;
+
+  if (p.input.jump && !p.wasJumping && !zeroGravity) {
+    if (p.onGround) {
+      p.vy = -17;
+      p.onGround = false;
+    } else if (p.onWall && p.wallHops > 0 && !p.hook) {
+      p.wallHops--;
+      p.vy = -17;
+      p.vx = p.x < WORLD.width / 2 ? 22 : -22;
+      p.hopResetAt = now + 5000;
+    }
+  }
+
+  p.wasJumping = p.input.jump;
+  p.vy = Math.min(maxFallSpeed, p.vy + gravity);
+
+  if (p.hook) {
+    const dx = p.x - p.hook.x;
+    const dy = p.y - p.hook.y;
+    const distance = Math.hypot(dx, dy) || 1;
+
+    if (distance > p.hook.length) {
+      const nx = dx / distance;
+      const ny = dy / distance;
+
+      p.x = p.hook.x + nx * p.hook.length;
+      p.y = p.hook.y + ny * p.hook.length;
+
+      const radialVelocity = p.vx * nx + p.vy * ny;
+      p.vx -= radialVelocity * nx;
+      p.vy -= radialVelocity * ny;
+    }
+  }
+
+  p.vx *= 0.98;
+  p.vy *= zeroGravity ? 0.995 : 0.995;
+  p.x += p.vx;
+  p.y += p.vy;
+
+  p.onWall = false;
+
+  if (p.x < p.size) {
+    p.x = p.size;
+    p.vx = 0;
+    if (!p.hook) p.onWall = true;
+  }
+
+  if (p.x > WORLD.width - p.size) {
+    p.x = WORLD.width - p.size;
+    p.vx = 0;
+    if (!p.hook) p.onWall = true;
+  }
+
+  p.onGround = false;
+
+  if (p.y > WORLD.height - p.size) {
+    p.y = WORLD.height - p.size;
+    p.vy = 0;
+    p.onGround = true;
+  }
+
+  for (const point of grapplePoints) {
+    const dx = p.x - point.x;
+    const dy = p.y - point.y;
+    const distance = Math.hypot(dx, dy);
+
+    if (distance < p.size + point.radius) {
+      if (p.vy > 0 && p.y < point.y) p.onGround = true;
+
+      const angle = Math.atan2(dy, dx);
+      p.x = point.x + Math.cos(angle) * (p.size + point.radius);
+      p.y = point.y + Math.sin(angle) * (p.size + point.radius);
+      p.vx *= 0.5;
+      p.vy *= 0.5;
+    }
+  }
+
+  for (const bot of bots) {
+    if (bot.taken) continue;
+
+    if (Math.hypot(p.x - bot.x, p.y - bot.y) < p.size + 18) {
+      bot.taken = true;
+      p.reds += bot.reds;
+      io.emit("botTaken", bot.id);
+    }
+  }
+
+  if (p.y <= WORLD.moon.y + WORLD.moon.radius) {
+    p.reachedMoon = true;
+    p.floating = true;
+    p.hook = null;
+    p.vx *= 0.25;
+    p.vy = -3;
+  }
+}
+
+function snapshot() {
+  return {
+    players: Array.from(players.values(), getPublicPlayer),
+    bots: bots.filter(bot => !bot.taken).map(bot => ({ ...bot })),
+    world: WORLD
+  };
+}
 
 setInterval(() => {
   const now = Date.now();
 
-  for (const player of players.values()) {
-    const dt = Math.min(0.1, Math.max(0, (now - player.lastUpdate) / 1000));
-    player.lastUpdate = now;
-
-    player.y += Math.max(PLAYER_SPEED, player.vy) * dt;
-    player.x += player.vx * dt;
-
-    player.x = Math.max(25, Math.min(WORLD_WIDTH - 25, player.x));
-
-    player.vx *= Math.pow(0.12, dt);
-
-    if (player.grappling && player.grappleTarget) {
-      const point = grapplePoints.get(player.grappleTarget);
-
-      if (!point) {
-        stopGrapple(player);
-      } else {
-        const dx = point.x - player.x;
-        const dy = point.y - player.y;
-        const distance = Math.max(1, Math.hypot(dx, dy));
-
-        player.vx += (dx / distance) * 240 * dt;
-        player.vy = Math.max(PLAYER_SPEED, player.vy + (dy / distance) * 100 * dt);
-
-        if (distance < 35) stopGrapple(player);
-      }
-    }
-
-    player.height = Math.max(0, Math.floor(player.y - START_Y));
-    ensurePointsAround(player.y);
+  for (const p of players.values()) {
+    updatePlayer(p, now);
   }
 
-  for (const bot of bots.values()) {
-    bot.y += PLAYER_SPEED * 0.5 * 0.05;
-    bot.x += bot.vx * 0.05;
+  io.emit("state", snapshot());
+}, 1000 / TICK_RATE);
 
-    if (bot.x < 40 || bot.x > WORLD_WIDTH - 40) {
-      bot.vx *= -1;
-    }
-  }
+app.use(express.static("public"));
 
-  if (bots.size < 15) spawnBot();
+app.get("/health", (_req, res) => res.json({ ok: true }));
 
-  broadcastState();
-}, 50);
-
-app.get("/", (req, res) => {
-  res.send("GRAPPLE server is running.");
-});
-
-app.get("/health", (req, res) => {
-  res.json({
-    status: "ok",
-    players: players.size,
-    grapplePoints: grapplePoints.size,
-    bots: bots.size
-  });
-});
-
-server.listen(PORT, "0.0.0.0", () => {
-  console.log(`GRAPPLE server running on port ${PORT}`);
+server.listen(PORT, () => {
+  console.log(`grapple is running at http://localhost:${PORT}`);
 });
