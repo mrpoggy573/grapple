@@ -1,1017 +1,1000 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-  <title>grapple</title>
-  <style>
-    * { box-sizing: border-box; }
-    html, body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background: #05070c;
-      color: #aaa;
-      font-family: Arial, sans-serif;
-      user-select: none;
-      -webkit-user-select: none;
-    }
-    canvas {
-      display: block;
-      width: 100%;
-      height: 100%;
-      touch-action: none;
-    }
-    button, input, select {
-      font: inherit;
-      background: #191919;
-      color: #bbb;
-      border: 1px solid #444;
-      border-radius: 3px;
-    }
-    button {
-      padding: 6px 9px;
-      cursor: pointer;
-    }
-    button:disabled {
-      opacity: .5;
-      cursor: default;
-    }
-    #menu {
-      position: fixed;
-      inset: 0;
-      z-index: 10;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #080808;
-    }
-    #menuBox {
-      width: min(340px, calc(100vw - 30px));
-      padding: 24px;
-      text-align: center;
-    }
-    h1 {
-      margin: 0 0 8px;
-      font-size: 42px;
-      font-weight: normal;
-      color: #ccc;
-    }
-    p { color: #888; }
-    #name {
-      width: 100%;
-      padding: 9px;
-      margin: 12px 0 8px;
-    }
-    #play {
-      width: 100%;
-      margin-top: 5px;
-      padding: 9px;
-      background: #333;
-      color: #ddd;
-    }
-    #hud {
-      display: none;
-      position: fixed;
-      left: 14px;
-      top: 14px;
-      z-index: 2;
-      pointer-events: none;
-      color: #bbb;
-      line-height: 1.5;
-      font-size: 14px;
-    }
-    #leaderboard {
-      position: fixed;
-      top: 14px;
-      right: 14px;
-      z-index: 3;
-      width: 180px;
-      pointer-events: none;
-    }
-    .panelTitle {
-      font-weight: normal;
-      color: #999;
-      margin-bottom: 5px;
-      font-size: 13px;
-    }
-    .leaderRow {
-      display: flex;
-      justify-content: space-between;
-      gap: 8px;
-      font-size: 12px;
-      padding: 2px 0;
-      color: #aaa;
-    }
-    .leaderRow span:first-child {
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>grapple</title>
+<style>
+* { box-sizing: border-box; }
 
-    /* Collapsible color menu at middle-right */
-    #customize {
-      display: none;
-      position: fixed;
-      right: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      z-index: 5;
-      width: 205px;
-      padding: 8px;
-      background: rgba(5, 7, 12, 0.72);
-      border-radius: 4px;
-      color: #aaa;
-      font-size: 12px;
-    }
-    #customizeHeader {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      cursor: pointer;
-      color: #999;
-      font-size: 12px;
-      letter-spacing: 0.3px;
-    }
-    #customizeToggle {
-      background: transparent;
-      border: none;
-      color: #999;
-      padding: 0 2px;
-      font-size: 11px;
-    }
-    #customizeBody {
-      margin-top: 8px;
-    }
-    #customize.collapsed {
-      width: auto;
-      padding: 6px 10px;
-    }
-    #customize.collapsed #customizeBody {
-      display: none;
-    }
-    #colorGrid {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 6px;
-      padding: 2px;
-      margin-bottom: 8px;
-    }
-    .colorButton {
-      width: 24px;
-      height: 24px;
-      padding: 0;
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      border-radius: 3px;
-      position: relative;
-    }
-    .colorButton.selected {
-      outline: 2px solid #ccc;
-      outline-offset: 1px;
-    }
-    .colorButton.selected::after {
-      content: "✓";
-      position: absolute;
-      inset: 0;
-      display: grid;
-      place-items: center;
-      color: #fff;
-      font-size: 14px;
-      font-weight: bold;
-      text-shadow: 0 1px 3px #000, 1px 0 3px #000;
-    }
-    #customize label {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      color: #999;
-    }
-    #playerPattern {
-      max-width: 115px;
-      padding: 3px 5px;
-      font-size: 12px;
-      background: rgba(25, 25, 25, 0.85);
-      color: #aaa;
-      border: 1px solid #333;
-    }
+html, body {
+  margin: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #05070c;
+  color: #aaa;
+  font-family: Arial, sans-serif;
+}
 
-    /* Tips at bottom-right on desktop, top-center on mobile */
-    #help {
-      position: fixed;
-      right: 14px;
-      bottom: 14px;
-      z-index: 2;
-      color: #888;
-      font-size: 12px;
-      line-height: 1.5;
-      text-align: right;
-      pointer-events: none;
-    }
-    body.is-mobile #help {
-      right: auto;
-      bottom: auto;
-      left: 50%;
-      top: 10px;
-      transform: translateX(-50%);
-      text-align: center;
-      font-size: 11px;
-      white-space: nowrap;
-    }
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
 
-    #restart {
-      display: none;
-      position: fixed;
-      left: 50%;
-      top: 48px;
-      transform: translateX(-50%);
-      z-index: 7;
-      padding: 8px 14px;
-    }
-    #toast {
-      position: fixed;
-      left: 50%;
-      top: 20px;
-      transform: translateX(-50%);
-      z-index: 20;
-      padding: 7px 10px;
-      display: none;
-      background: #111;
-      color: #ccc;
-      font-size: 13px;
-      pointer-events: none;
-    }
+button, input, select {
+  font: inherit;
+  background: #191919;
+  color: #bbb;
+  border: 1px solid #444;
+  border-radius: 3px;
+}
 
-    /* Mobile Touch Controls: Move on Left, Context Action on Right */
-    #mobileMoveControls {
-      display: none;
-      position: fixed;
-      left: 16px;
-      bottom: 16px;
-      z-index: 6;
-      gap: 12px;
-      touch-action: none;
-    }
-    #mobileActionControls {
-      display: none;
-      position: fixed;
-      right: 16px;
-      bottom: 16px;
-      z-index: 6;
-      touch-action: none;
-    }
-    body.is-mobile #mobileMoveControls,
-    body.is-mobile #mobileActionControls {
-      display: flex;
-    }
+button { padding: 6px 9px; cursor: pointer; }
+button:disabled { opacity: .5; cursor: default; }
 
-    .touchBtn {
-      width: 62px;
-      height: 62px;
-      border-radius: 10px;
-      background: rgba(25, 25, 25, 0.65);
-      border: 1px solid rgba(170, 170, 170, 0.35);
-      color: #bbb;
-      font-size: 22px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      touch-action: none;
-      -webkit-tap-highlight-color: transparent;
-      transition: background 0.1s, border-color 0.1s, color 0.1s;
-    }
-    .touchBtn.active {
-      background: rgba(95, 95, 95, 0.85);
-      border-color: #eee;
-      color: #fff;
-    }
+#menu {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #080808;
+}
 
-    #btnAction {
-      width: 84px;
-      height: 68px;
-      font-size: 13px;
-      font-weight: bold;
-      letter-spacing: 0.6px;
-    }
-    #btnAction.grapple-ready {
-      border-color: #ff6500;
-      color: #ff944d;
-      background: rgba(55, 25, 10, 0.75);
-    }
-    #btnAction.grapple-ready.active {
-      background: rgba(255, 101, 0, 0.85);
-      color: #fff;
-      border-color: #fff;
-    }
+#menuBox {
+  width: min(340px, calc(100vw - 30px));
+  padding: 24px;
+  text-align: center;
+}
 
-    @media (max-width: 600px) {
-      #leaderboard { width: 140px; right: 8px; top: 8px; }
-      #hud { left: 8px; top: 8px; font-size: 13px; }
-      #customize { right: 8px; }
-      #mobileMoveControls { left: 10px; bottom: 10px; gap: 10px; }
-      #mobileActionControls { right: 10px; bottom: 10px; }
-      .touchBtn { width: 58px; height: 58px; }
-      #btnAction { width: 78px; height: 62px; font-size: 12px; }
-    }
-  </style>
+h1 {
+  margin: 0 0 8px;
+  font-size: 42px;
+  font-weight: normal;
+  color: #ccc;
+}
+
+p { color: #888; }
+
+#name {
+  width: 100%;
+  padding: 9px;
+  margin: 12px 0 8px;
+}
+
+#play {
+  width: 100%;
+  margin-top: 5px;
+  padding: 9px;
+  background: #333;
+  color: #ddd;
+}
+
+#hud {
+  display: none;
+  position: fixed;
+  left: 14px;
+  top: 14px;
+  z-index: 2;
+  pointer-events: none;
+  color: #bbb;
+  line-height: 1.5;
+  font-size: 14px;
+}
+
+#leaderboard {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 3;
+  width: 180px;
+  pointer-events: none;
+}
+
+.panelTitle {
+  font-weight: normal;
+  color: #999;
+  margin-bottom: 5px;
+}
+
+.leaderRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  padding: 2px 0;
+  color: #aaa;
+}
+
+.leaderRow span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#customize {
+  display: none;
+  position: fixed;
+  left: 14px;
+  bottom: 65px;
+  z-index: 5;
+  width: 230px;
+  padding: 11px;
+  background: rgba(10, 12, 18, .94);
+  border: 1px solid #303744;
+  border-radius: 5px;
+  color: #bbb;
+  font-size: 12px;
+}
+
+#customizeTitle {
+  color: #ddd;
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+#colorGrid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px;
+  padding: 3px;
+  margin-bottom: 10px;
+}
+
+.colorButton {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 2px solid #555;
+  border-radius: 4px;
+  position: relative;
+}
+
+.colorButton.selected {
+  outline: 2px solid white;
+  outline-offset: 2px;
+}
+
+.colorButton.selected::after {
+  content: "✓";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: white;
+  font-size: 16px;
+  font-weight: bold;
+  text-shadow: 0 1px 3px black, 1px 0 3px black;
+}
+
+#customize label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+#playerPattern {
+  max-width: 125px;
+  padding: 4px;
+  font-size: 12px;
+}
+
+#restart {
+  display: none;
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 5;
+  padding: 8px 12px;
+}
+
+#toast {
+  position: fixed;
+  left: 50%;
+  top: 20px;
+  transform: translateX(-50%);
+  z-index: 20;
+  padding: 7px 10px;
+  display: none;
+  background: #111;
+  color: #ccc;
+  font-size: 13px;
+  pointer-events: none;
+}
+
+#help {
+  position: fixed;
+  left: 14px;
+  bottom: 14px;
+  z-index: 2;
+  color: #888;
+  font-size: 12px;
+  line-height: 1.5;
+  pointer-events: none;
+}
+
+@media (max-width: 600px) {
+  #leaderboard {
+    width: 145px;
+    right: 8px;
+    top: 8px;
+  }
+
+  #hud {
+    left: 8px;
+    top: 8px;
+    font-size: 13px;
+  }
+
+  #customize {
+    left: 8px;
+    bottom: 65px;
+    width: 215px;
+    padding: 9px;
+  }
+
+  #help {
+    left: 8px;
+    bottom: 8px;
+    max-width: 145px;
+    font-size: 11px;
+  }
+
+  #restart {
+    right: 8px;
+    bottom: 8px;
+  }
+}
+</style>
 </head>
 <body>
-  <canvas id="game"></canvas>
 
-  <div id="menu">
-    <div id="menuBox">
-      <h1>grapple</h1>
-      <p>Climb up. Reach the Moon.</p>
-      <input id="name" maxlength="16" placeholder="Your name" value="Player" autocomplete="off">
-      <button id="play">PLAY</button>
-      <p id="status" style="font-size:12px;margin-bottom:0">Connecting to server...</p>
-    </div>
+<canvas id="game"></canvas>
+
+<div id="menu">
+  <div id="menuBox">
+    <h1>grapple</h1>
+    <p>Climb up. Reach the Moon.</p>
+    <input id="name" maxlength="16" placeholder="Your name" value="Player" autocomplete="off">
+    <button id="play">PLAY</button>
+    <p id="status" style="font-size:12px;margin-bottom:0">Connecting to server...</p>
   </div>
+</div>
 
-  <div id="hud">
-    <div id="height">HEIGHT: 0m</div>
-    <div id="reds">REDS: 10</div>
-    <div id="hops">WALL HOPS: 5/5</div>
-  </div>
+<div id="hud">
+  <div id="height">HEIGHT: 0m</div>
+  <div id="reds">REDS: 10</div>
+  <div id="hops">WALL HOPS: 5/5</div>
+</div>
 
-  <div id="leaderboard">
-    <div class="panelTitle">LEADERBOARD</div>
-    <div id="leaderRows">Waiting for players...</div>
-  </div>
+<div id="leaderboard">
+  <div class="panelTitle">LEADERBOARD</div>
+  <div id="leaderRows">Waiting for players...</div>
+</div>
 
-  <div id="customize">
-    <div id="customizeHeader">
-      <span>COLOR</span>
-      <button type="button" id="customizeToggle" aria-expanded="true">▲</button>
-    </div>
-    <div id="customizeBody">
-      <div id="colorGrid"></div>
-      <label>
-        Pattern
-        <select id="playerPattern">
-          <option value="Solid">Solid</option>
-          <option value="Horizontal">Lines</option>
-          <option value="Diagonal">Diagonal</option>
-          <option value="Hexagon">Hexagon</option>
-        </select>
-      </label>
-    </div>
-  </div>
+<div id="customize">
+  <div id="customizeTitle">YOUR CIRCLE — COLOR</div>
+  <div id="colorGrid"></div>
+  <label>
+    Pattern
+    <select id="playerPattern">
+      <option value="Solid">Solid</option>
+      <option value="Horizontal">Lines</option>
+      <option value="Diagonal">Diagonal</option>
+      <option value="Hexagon">Hexagon</option>
+    </select>
+  </label>
+</div>
 
-  <!-- Left side: Move Left / Right -->
-  <div id="mobileMoveControls">
-    <button type="button" class="touchBtn" id="btnLeft" aria-label="Move Left">◀</button>
-    <button type="button" class="touchBtn" id="btnRight" aria-label="Move Right">▶</button>
-  </div>
+<div id="help">
+  A / D or ← / → to move<br>
+  W / Space to jump<br>
+  Hold mouse to grapple
+</div>
 
-  <!-- Right side: Context-Sensitive Jump / Grapple Button -->
-  <div id="mobileActionControls">
-    <button type="button" class="touchBtn" id="btnAction" aria-label="Jump or Grapple">JUMP</button>
-  </div>
+<button id="restart">RESTART</button>
+<div id="toast"></div>
 
-  <div id="help">
-    A / D or ← / → to move<br>
-    W / Space to jump<br>
-    Hold mouse to grapple
-  </div>
+<script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+<script>
+(() => {
+  "use strict";
 
-  <button id="restart">RESTART</button>
-  <div id="toast"></div>
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d");
 
-  <script src="https://socket.io"></script>
-  <script>
-    (() => {
-      "use strict";
-      const canvas = document.getElementById("game");
-      const ctx = canvas.getContext("2d");
-      const menu = document.getElementById("menu");
-      const status = document.getElementById("status");
-      const playButton = document.getElementById("play");
-      const hud = document.getElementById("hud");
-      const customize = document.getElementById("customize");
-      const customizeHeader = document.getElementById("customizeHeader");
-      const customizeToggle = document.getElementById("customizeToggle");
-      const colorGrid = document.getElementById("colorGrid");
-      const patternInput = document.getElementById("playerPattern");
-      const restartButton = document.getElementById("restart");
-      const helpBox = document.getElementById("help");
-      const btnAction = document.getElementById("btnAction");
+  const menu = document.getElementById("menu");
+  const status = document.getElementById("status");
+  const playButton = document.getElementById("play");
+  const hud = document.getElementById("hud");
+  const customize = document.getElementById("customize");
+  const colorGrid = document.getElementById("colorGrid");
+  const patternInput = document.getElementById("playerPattern");
+  const restartButton = document.getElementById("restart");
 
-      // Mobile detection
-      const isMobile =
-        "ontouchstart" in window ||
-Use code with caution.
-navigator.maxTouchPoints > 0 ||
-window.matchMedia("(pointer: coarse)").matches;
-if (isMobile) {
-document.body.classList.add("is-mobile");
-helpBox.textContent = "◀ ▶ Move • Right Button: Jump / Grapple";
-// Start collapsed on mobile so view stays unobstructed
-customize.classList.add("collapsed");
-customizeToggle.textContent = "▼";
-customizeToggle.setAttribute("aria-expanded", "false");
-}
-// Toggle color menu expand/collapse
-customizeHeader.addEventListener("click", () => {
-const isCollapsed = customize.classList.toggle("collapsed");
-customizeToggle.textContent = isCollapsed ? "▼" : "▲";
-customizeToggle.setAttribute("aria-expanded", String(!isCollapsed));
-});
-const socket = io("onrender.com", {
-transports: ["websocket", "polling"]
-});
-const COLORS = [
-{ name: "Red", hex: "#ff3333" },
-{ name: "Orange", hex: "#ff8800" },
-{ name: "Yellow", hex: "#ffff00" },
-{ name: "Green", hex: "#00ff66" },
-{ name: "Blue", hex: "#3388ff" },
-{ name: "Purple", hex: "#aa44ff" },
-{ name: "Pink", hex: "#ff66cc" },
-{ name: "Cyan", hex: "#00ffff" },
-{ name: "White", hex: "#ffffff" },
-{ name: "Black", hex: "#222222" },
-{ name: "Brown", hex: "#8b4513" },
-{ name: "Gray", hex: "#888888" }
-];
-const WORLD_DEFAULT = { width: 1000, height: 30000, moon: { x: 500, y: 1500, radius: 500 } };
-const SNAPSHOT_DELAY = 80;
-const MAX_SNAPSHOTS = 30;
-const PLAYER_INPUT_RATE = 30;
-const GRAPPLE_DETECT_RADIUS = 320;
-let myId = null;
-let joined = false;
-let world = WORLD_DEFAULT;
-let grapplePoints = [];
-let players = [];
-let bots = [];
-let snapshots = [];
-let mouse = { x: 0, y: 0, down: false };
-let activeGrappleTouchId = null;
-let keys = {};
-let touchState = { left: false, right: false, jump: false };
-let actionHoldingGrapple = false;
-let nearestGrapplePoint = null;
-let localPlayer = null;
-let cameraX = 0;
-let cameraY = 0;
-let selectedColor = "#00ff66";
-let lastSentInput = "";
-let lastHudSignature = "";
-let lastLeaderboardSignature = "";
-let toastTimer = null;
-let lastFrameTime = 0;
-function resize() {
-const ratio = Math.min(window.devicePixelRatio || 1, 2);
-canvas.width = Math.round(innerWidth * ratio);
-canvas.height = Math.round(innerHeight * ratio);
-canvas.style.width = innerWidth + "px";
-canvas.style.height = innerHeight + "px";
-ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
-}
-addEventListener("resize", resize);
-resize();
-function createColorMenu() {
-const fragment = document.createDocumentFragment();
-for (const color of COLORS) {
-const button = document.createElement("button");
-button.type = "button";
-button.className = "colorButton";
-button.style.backgroundColor = color.hex;
-button.title = color.name;
-button.setAttribute("aria-label", color.name);
-button.addEventListener("click", () => {
-selectedColor = color.hex;
-updateColorButtons();
-updateAppearance();
-});
-fragment.appendChild(button);
-}
-colorGrid.replaceChildren(fragment);
-updateColorButtons();
-}
-function updateColorButtons() {
-Array.from(colorGrid.children).forEach((button, index) => {
-const selected = COLORS[index].hex === selectedColor;
-button.classList.toggle("selected", selected);
-button.setAttribute("aria-pressed", String(selected));
-});
-}
-function updateAppearance() {
-if (!joined) return;
-socket.emit("setAppearance", { color: selectedColor, pattern: patternInput.value });
-const me = players.find(player => player.id === myId);
-if (me) {
-me.color = selectedColor;
-me.pattern = patternInput.value;
-}
-}
-createColorMenu();
-// Find closest grapple point within range of player
-function findNearestGrapplePoint(player) {
-if (!player || !grapplePoints.length) return null;
-let closest = null;
-let bestDist = GRAPPLE_DETECT_RADIUS;
-for (const point of grapplePoints) {
-const dist = Math.hypot(point.x - player.x, point.y - player.y);
-if (dist <= bestDist) {
-bestDist = dist;
-closest = point;
-}
-}
-return closest;
-}
-// Left / Right directional buttons
-function bindMoveButton(element, stateKey) {
-const setPressed = pressed => {
-touchState[stateKey] = pressed;
-element.classList.toggle("active", pressed);
-sendInput();
-};
-element.addEventListener("touchstart", e => {
-e.preventDefault();
-setPressed(true);
-}, { passive: false });
-element.addEventListener("touchend", e => {
-e.preventDefault();
-setPressed(false);
-}, { passive: false });
-element.addEventListener("touchcancel", e => {
-e.preventDefault();
-setPressed(false);
-}, { passive: false });
-element.addEventListener("mousedown", e => {
-e.preventDefault();
-setPressed(true);
-});
-addEventListener("mouseup", () => {
-if (touchState[stateKey]) setPressed(false);
-});
-}
-bindMoveButton(document.getElementById("btnLeft"), "left");
-bindMoveButton(document.getElementById("btnRight"), "right");
-// Context-Aware Right Action Button (Jump vs. Grapple)
-function startActionPress(e) {
-if (e) e.preventDefault();
-btnAction.classList.add("active");
-if (nearestGrapplePoint || (localPlayer && localPlayer.hook)) {
-// Aim at nearest grapple point (or keep active hook target) and hold grapple
-const target = nearestGrapplePoint || localPlayer.hook;
-mouse.x = target.x - cameraX;
-mouse.y = target.y - cameraY;
-mouse.down = true;
-actionHoldingGrapple = true;
-} else {
-touchState.jump = true;
-}
-sendInput();
-}
-function endActionPress(e) {
-if (e) e.preventDefault();
-btnAction.classList.remove("active");
-touchState.jump = false;
-if (actionHoldingGrapple) {
-actionHoldingGrapple = false;
-mouse.down = false;
-}
-sendInput();
-}
-btnAction.addEventListener("touchstart", startActionPress, { passive: false });
-btnAction.addEventListener("touchend", endActionPress, { passive: false });
-btnAction.addEventListener("touchcancel", endActionPress, { passive: false });
-btnAction.addEventListener("mousedown", startActionPress);
-addEventListener("mouseup", () => {
-if (btnAction.classList.contains("active")) endActionPress();
-});
-// Direct Canvas Touch-to-Grapple (optional manual aiming)
-canvas.addEventListener("touchstart", e => {
-if (!joined) return;
-e.preventDefault();
-if (activeGrappleTouchId === null && e.changedTouches.length > 0) {
-const touch = e.changedTouches;
-activeGrappleTouchId = touch.identifier;
-mouse.x = touch.clientX;
-mouse.y = touch.clientY;
-mouse.down = true;
-sendInput();
-}
-}, { passive: false });
-canvas.addEventListener("touchmove", e => {
-if (!joined || activeGrappleTouchId === null) return;
-e.preventDefault();
-for (let i = 0; i < e.changedTouches.length; i++) {
-const touch = e.changedTouches[i];
-if (touch.identifier === activeGrappleTouchId) {
-mouse.x = touch.clientX;
-mouse.y = touch.clientY;
-break;
-}
-}
-}, { passive: false });
-function handleTouchEnd(e) {
-if (activeGrappleTouchId === null) return;
-for (let i = 0; i < e.changedTouches.length; i++) {
-if (e.changedTouches[i].identifier === activeGrappleTouchId) {
-activeGrappleTouchId = null;
-mouse.down = false;
-sendInput();
-break;
-}
-}
-}
-canvas.addEventListener("touchend", handleTouchEnd);
-canvas.addEventListener("touchcancel", handleTouchEnd);
-socket.on("connect", () => {
-status.textContent = "Ready to play";
-playButton.disabled = false;
-});
-socket.on("disconnect", () => {
-status.textContent = "Disconnected. Reconnecting...";
-if (!joined) playButton.disabled = true;
-});
-socket.on("connect_error", () => {
-if (!joined) status.textContent = "Connecting to server...";
-});
-socket.on("init", data => {
-myId = data.id;
-world = data.world || WORLD_DEFAULT;
-grapplePoints = data.grapplePoints || [];
-players = data.players || [];
-bots = data.bots || [];
-const now = performance.now();
-snapshots = [{ time: now, players: clonePlayers(players) }];
-joined = true;
-menu.style.display = "none";
-hud.style.display = "block";
-customize.style.display = "block";
-lastHudSignature = "";
-lastLeaderboardSignature = "";
-updateAppearance();
-});
-socket.on("playerJoined", player => {
-if (!players.some(p => p.id === player.id)) {
-players.push(player);
-}
-if (snapshots.length) {
-for (const snapshot of snapshots) {
-if (!snapshot.players.some(p => p.id === player.id)) {
-snapshot.players.push({ ...player });
-}
-}
-}
-});
-socket.on("playerLeft", id => {
-players = players.filter(p => p.id !== id);
-for (const snapshot of snapshots) {
-snapshot.players = snapshot.players.filter(p => p.id !== id);
-}
-});
-socket.on("state", state => {
-if (!state || !Array.isArray(state.players)) return;
-const now = performance.now();
-world = state.world || world;
-players = state.players;
-bots = state.bots || [];
-snapshots.push({ time: now, players: clonePlayers(players) });
-while (snapshots.length > MAX_SNAPSHOTS) {
-snapshots.shift();
-}
-const cutoff = now - 1500;
-while (snapshots.length > 2 && snapshots.time < cutoff) {
-snapshots.shift();
-}
-});
-socket.on("botTaken", id => {
-bots = bots.filter(bot => bot.id !== id);
-});
-socket.on("notice", showToast);
-playButton.addEventListener("click", () => {
-if (!socket.connected) {
-status.textContent = "Server not connected.";
-return;
-}
-playButton.disabled = true;
-socket.emit("join", { name: document.getElementById("name").value || "Player" });
-});
-patternInput.addEventListener("change", updateAppearance);
-function clonePlayers(list) {
-return list.map(player => ({
-...player,
-hook: player.hook ? { ...player.hook } : null
-}));
-}
-function showToast(message) {
-const toast = document.getElementById("toast");
-toast.textContent = String(message);
-toast.style.display = "block";
-clearTimeout(toastTimer);
-toastTimer = setTimeout(() => {
-toast.style.display = "none";
-}, 1800);
-}
-function getMe() {
-return players.find(player => player.id === myId) || null;
-}
-function getInterpolatedPlayers(renderTime) {
-if (!snapshots.length) return players;
-if (snapshots.length === 1) {
-return snapshots.players;
-}
-let older = snapshots;
-let newer = snapshots;
-if (renderTime <= older.time) {
-return older.players;
-}
-let found = false;
-for (let i = 0; i < snapshots.length - 1; i++) {
-if (snapshots[i].time <= renderTime && snapshots[i + 1].time >= renderTime) {
-older = snapshots[i];
-newer = snapshots[i + 1];
-found = true;
-break;
-}
-}
-if (!found) {
-const latest = snapshots[snapshots.length - 1];
-const previous = snapshots[snapshots.length - 2];
-const elapsed = renderTime - latest.time;
-if (elapsed <= 0) {
-return latest.players;
-}
-const extraTime = Math.min(elapsed, 35);
-const interval = Math.max(1, latest.time - previous.time);
-const factor = extraTime / interval;
-const previousById = new Map(previous.players.map(player => [player.id, player]));
-return latest.players.map(current => {
-const prior = previousById.get(current.id);
-if (!prior || extraTime <= 0) return current;
-return {
-...current,
-x: current.x + (current.x - prior.x) * factor,
-y: current.y + (current.y - prior.y) * factor
-};
-});
-}
-const interval = newer.time - older.time;
-const alpha = interval > 0 ? Math.max(0, Math.min(1, (renderTime - older.time) / interval)) : 1;
-const oldById = new Map(older.players.map(player => [player.id, player]));
-return newer.players.map(current => {
-const prior = oldById.get(current.id);
-if (!prior) return current;
-return {
-...current,
-x: prior.x + (current.x - prior.x) * alpha,
-y: prior.y + (current.y - prior.y) * alpha
-};
-});
-}
-function sendInput() {
-if (!joined) return;
-const input = {
-left: !!(keys.ArrowLeft || keys.KeyA || touchState.left),
-right: !!(keys.ArrowRight || keys.KeyD || touchState.right),
-jump: !!(keys.Space || keys.KeyW || keys.ArrowUp || touchState.jump),
-mouseDown: mouse.down,
-aimX: mouse.x + cameraX,
-aimY: mouse.y + cameraY
-};
-const signature = JSON.stringify(input);
-if (signature !== lastSentInput) {
-socket.emit("input", input);
-lastSentInput = signature;
-}
-}
-addEventListener("keydown", event => {
-if (["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.code)) {
-event.preventDefault();
-}
-keys[event.code] = true;
-sendInput();
-}, { passive: false });
-addEventListener("keyup", event => {
-keys[event.code] = false;
-sendInput();
-});
-canvas.addEventListener("mousemove", event => {
-mouse.x = event.clientX;
-mouse.y = event.clientY;
-});
-canvas.addEventListener("mousedown", event => {
-if (event.button === 0) {
-mouse.down = true;
-sendInput();
-}
-});
-addEventListener("mouseup", event => {
-if (event.button === 0) {
-mouse.down = false;
-sendInput();
-}
-});
-addEventListener("blur", () => {
-keys = {};
-touchState = { left: false, right: false, jump: false };
-actionHoldingGrapple = false;
-activeGrappleTouchId = null;
-mouse.down = false;
-document.querySelectorAll(".touchBtn").forEach(btn => btn.classList.remove("active"));
-sendInput();
-});
-restartButton.addEventListener("click", () => {
-if (joined) socket.emit("restart");
-});
-function drawCircle(x, y, radius, color) {
-ctx.fillStyle = color;
-ctx.beginPath();
-ctx.arc(x, y, radius, 0, Math.PI * 2);
-ctx.fill();
-}
-function drawPatternCircle(x, y, radius, color, pattern) {
-ctx.save();
-ctx.beginPath();
-ctx.arc(x, y, radius, 0, Math.PI * 2);
-ctx.fillStyle = color;
-ctx.fill();
-ctx.clip();
-ctx.strokeStyle = "rgba(255,255,255,0.82)";
-ctx.lineWidth = 1.5;
-if (pattern === "Horizontal" || pattern === "Diagonal") {
-for (let offset = -radius * 2; offset <= radius * 2; offset += 7) {
-ctx.beginPath();
-if (pattern === "Horizontal") {
-ctx.moveTo(x - radius, y + offset);
-ctx.lineTo(x + radius, y + offset);
-} else {
-ctx.moveTo(x - radius, y + offset);
-ctx.lineTo(x + radius, y + offset + radius * 2);
-}
-ctx.stroke();
-}
-} else if (pattern === "Hexagon") {
-const size = 5;
-const stepX = size * 1.75;
-const stepY = size * 1.5;
-for (let row = -radius; row <= radius; row += stepY) {
-for (let col = -radius; col <= radius; col += stepX) {
-const hx = x + col + (Math.round(row / stepY) % 2) * size * 0.875;
-const hy = y + row;
-ctx.beginPath();
-for (let i = 0; i < 6; i++) {
-const angle = Math.PI / 3 * i;
-const px = hx + Math.cos(angle) * size;
-const py = hy + Math.sin(angle) * size;
-if (i === 0) ctx.moveTo(px, py);
-else ctx.lineTo(px, py);
-}
-ctx.closePath();
-ctx.stroke();
-}
-}
-}
-ctx.restore();
-ctx.beginPath();
-ctx.arc(x, y, radius, 0, Math.PI * 2);
-ctx.strokeStyle = "rgba(255,255,255,0.45)";
-ctx.lineWidth = 1;
-ctx.stroke();
-}
-function updateHud(player) {
-const signature = ${player.height}|${player.reds}|${player.wallHops};
-if (signature === lastHudSignature) return;
-document.getElementById("height").textContent = "HEIGHT: " + player.height + "m";
-document.getElementById("reds").textContent = "REDS: " + player.reds;
-document.getElementById("hops").textContent = "WALL HOPS: " + player.wallHops + "/5";
-lastHudSignature = signature;
-}
-function updateLeaderboard(renderedPlayers) {
-const sorted = [...renderedPlayers]
-.sort((a, b) => b.height - a.height)
-.slice(0, 7);
-const signature = sorted
-.map((player, index) => ${index + 1}:${player.id}:${player.name}:${player.height})
-.join("|");
-if (signature === lastLeaderboardSignature) return;
-const leaderRows = document.getElementById("leaderRows");
-if (!sorted.length) {
-leaderRows.textContent = "Waiting for players...";
-lastLeaderboardSignature = signature;
-return;
-}
-const fragment = document.createDocumentFragment();
-sorted.forEach((player, index) => {
-const row = document.createElement("div");
-row.className = "leaderRow";
-const name = document.createElement("span");
-name.textContent = (index + 1) + ". " + player.name + (player.id === myId ? " (you)" : "");
-const height = document.createElement("span");
-height.textContent = player.height + "m";
-row.append(name, height);
-fragment.appendChild(row);
-});
-leaderRows.replaceChildren(fragment);
-lastLeaderboardSignature = signature;
-}
-function updateActionButtonState() {
-if (!isMobile || !localPlayer) return;
-nearestGrapplePoint = findNearestGrapplePoint(localPlayer);
-const canGrapple = Boolean(nearestGrapplePoint || localPlayer.hook || actionHoldingGrapple);
-if (canGrapple) {
-if (btnAction.textContent !== "GRAPPLE") btnAction.textContent = "GRAPPLE";
-btnAction.classList.add("grapple-ready");
-} else {
-if (btnAction.textContent !== "JUMP") btnAction.textContent = "JUMP";
-btnAction.classList.remove("grapple-ready");
-}
-}
-function draw() {
-const now = performance.now();
-const width = innerWidth;
-const height = innerHeight;
-lastFrameTime = now;
-ctx.clearRect(0, 0, width, height);
-const renderedPlayers = getInterpolatedPlayers(now - SNAPSHOT_DELAY);
-localPlayer = renderedPlayers.find(player => player.id === myId) || getMe();
-if (localPlayer) {
-cameraX = localPlayer.x - width / 2;
-cameraY = localPlayer.y - height / 2;
-cameraX = Math.max(-width / 2 + world.width / 2, Math.min(world.width - width / 2, cameraX));
-restartButton.style.display = localPlayer.floating ? "block" : "none";
-updateHud(localPlayer);
-updateActionButtonState();
-} else {
-cameraX = 0;
-cameraY = world.height - height;
-}
-const altitude = localPlayer ? Math.max(0, (world.height - localPlayer.y) / world.height) : 0;
-const blue = Math.max(0, 190 * (1 - altitude * 2.5));
-const sky = ctx.createLinearGradient(0, 0, 0, height);
-sky.addColorStop(0, rgb(${Math.floor(blue * 0.55)},${Math.floor(blue * 0.82)},${Math.floor(blue)}));
-sky.addColorStop(1, "#03050a");
-ctx.fillStyle = localPlayer && localPlayer.floating ? "#070716" : sky;
-ctx.fillRect(0, 0, width, height);
-ctx.save();
-ctx.translate(-cameraX, -cameraY);
-ctx.fillStyle = "#111722";
-ctx.fillRect(-1500, 0, 1500, world.height + 2000);
-ctx.fillRect(world.width, 0, 1500, world.height + 2000);
-ctx.fillStyle = "#222936";
-ctx.fillRect(-1000, world.height, world.width + 2000, 1000);
-for (const point of grapplePoints) {
-const sx = point.x - cameraX;
-const sy = point.y - cameraY;
-if (sx < -50 || sx > width + 50 || sy < -50 || sy > height + 50) continue;
-drawCircle(point.x, point.y, point.radius, "#ff6500");
-const isMouseHover = Math.hypot(mouse.x - sx, mouse.y - sy) < 150;
-const isMobileTarget = isMobile && nearestGrapplePoint === point;
-if (isMouseHover || isMobileTarget) {
-ctx.strokeStyle = isMobileTarget ? "#ff944d" : "#aaa";
-ctx.lineWidth = 2;
-ctx.beginPath();
-ctx.arc(point.x, point.y, point.radius + 6, 0, Math.PI * 2);
-ctx.stroke();
-}
-}
-for (const bot of bots) {
-const sx = bot.x - cameraX;
-const sy = bot.y - cameraY;
-if (sx < -40 || sx > width + 40 || sy < -40 || sy > height + 40) continue;
-drawCircle(bot.x, bot.y, 18, "#ff3030");
-ctx.fillStyle = "#fff";
-ctx.font = "bold 10px Arial";
-ctx.textAlign = "center";
-ctx.fillText("+" + bot.reds, bot.x, bot.y + 3);
-}
-drawCircle(world.moon.x, world.moon.y, world.moon.radius, "#e8edf5");
-drawCircle(world.moon.x - 130, world.moon.y - 80, 65, "#cbd2df");
-drawCircle(world.moon.x + 145, world.moon.y + 95, 90, "#cbd2df");
-drawCircle(world.moon.x + 35, world.moon.y - 190, 45, "#cbd2df");
-for (const player of renderedPlayers) {
-if (player.hook) {
-ctx.strokeStyle = player.id === myId ? "#bbb" : "#777";
-ctx.lineWidth = 2;
-ctx.beginPath();
-ctx.moveTo(player.x, player.y);
-ctx.lineTo(player.hook.x, player.hook.y);
-ctx.stroke();
-}
-drawPatternCircle(
-player.x,
-player.y,
-player.size,
-player.color || "#00ff66",
-player.pattern || "Solid"
-);
-ctx.fillStyle = "#bbb";
-ctx.font = "12px Arial";
-ctx.textAlign = "center";
-ctx.fillText(player.name, player.x, player.y - 27);
-}
-ctx.restore();
-updateLeaderboard(renderedPlayers);
-requestAnimationFrame(draw);
-}
-setInterval(sendInput, 1000 / PLAYER_INPUT_RATE);
-draw();
+  const socket = io("https://grapple-qqcp.onrender.com", {
+    transports: ["websocket", "polling"]
+  });
+
+  const COLORS = [
+    { name: "Red", hex: "#ff3333" },
+    { name: "Orange", hex: "#ff8800" },
+    { name: "Yellow", hex: "#ffff00" },
+    { name: "Green", hex: "#00ff66" },
+    { name: "Blue", hex: "#3388ff" },
+    { name: "Purple", hex: "#aa44ff" },
+    { name: "Pink", hex: "#ff66cc" },
+    { name: "Cyan", hex: "#00ffff" },
+    { name: "White", hex: "#ffffff" },
+    { name: "Black", hex: "#222222" },
+    { name: "Brown", hex: "#8b4513" },
+    { name: "Gray", hex: "#888888" }
+  ];
+
+  const WORLD_DEFAULT = {
+    width: 1000,
+    height: 30000,
+    moon: { x: 500, y: 1500, radius: 500 }
+  };
+
+  const SNAPSHOT_DELAY = 80;
+  const MAX_SNAPSHOTS = 30;
+  const PLAYER_INPUT_RATE = 30;
+
+  let myId = null;
+  let joined = false;
+  let world = WORLD_DEFAULT;
+
+  let grapplePoints = [];
+  let players = [];
+  let bots = [];
+  let snapshots = [];
+
+  let mouse = { x: 0, y: 0, down: false };
+  let keys = {};
+  let localPlayer = null;
+
+  let cameraX = 0;
+  let cameraY = 0;
+  let selectedColor = "#00ff66";
+  let lastSentInput = "";
+  let lastHudSignature = "";
+  let lastLeaderboardSignature = "";
+  let toastTimer = null;
+  let lastFrameTime = 0;
+
+  function resize() {
+    const ratio = Math.min(window.devicePixelRatio || 1, 2);
+
+    canvas.width = Math.round(innerWidth * ratio);
+    canvas.height = Math.round(innerHeight * ratio);
+    canvas.style.width = innerWidth + "px";
+    canvas.style.height = innerHeight + "px";
+
+    ctx.setTransform(ratio, 0, 0, ratio, 0, 0);
+  }
+
+  addEventListener("resize", resize);
+  resize();
+
+  function createColorMenu() {
+    const fragment = document.createDocumentFragment();
+
+    for (const color of COLORS) {
+      const button = document.createElement("button");
+
+      button.type = "button";
+      button.className = "colorButton";
+      button.style.backgroundColor = color.hex;
+      button.title = color.name;
+      button.setAttribute("aria-label", color.name);
+
+      button.addEventListener("click", () => {
+        selectedColor = color.hex;
+        updateColorButtons();
+        updateAppearance();
+      });
+
+      fragment.appendChild(button);
+    }
+
+    colorGrid.replaceChildren(fragment);
+    updateColorButtons();
+  }
+
+  function updateColorButtons() {
+    Array.from(colorGrid.children).forEach((button, index) => {
+      const selected = COLORS[index].hex === selectedColor;
+
+      button.classList.toggle("selected", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    });
+  }
+
+  function updateAppearance() {
+    if (!joined) return;
+
+    socket.emit("setAppearance", {
+      color: selectedColor,
+      pattern: patternInput.value
+    });
+
+    const me = players.find(player => player.id === myId);
+
+    if (me) {
+      me.color = selectedColor;
+      me.pattern = patternInput.value;
+    }
+  }
+
+  createColorMenu();
+
+  socket.on("connect", () => {
+    status.textContent = "Ready to play";
+    playButton.disabled = false;
+  });
+
+  socket.on("disconnect", () => {
+    status.textContent = "Disconnected. Reconnecting...";
+
+    if (!joined) playButton.disabled = true;
+  });
+
+  socket.on("connect_error", () => {
+    if (!joined) status.textContent = "Connecting to server...";
+  });
+
+  socket.on("init", data => {
+    myId = data.id;
+    world = data.world || WORLD_DEFAULT;
+    grapplePoints = data.grapplePoints || [];
+    players = data.players || [];
+    bots = data.bots || [];
+
+    const now = performance.now();
+
+    snapshots = [{
+      time: now,
+      players: clonePlayers(players)
+    }];
+
+    joined = true;
+
+    menu.style.display = "none";
+    hud.style.display = "block";
+    customize.style.display = "block";
+
+    lastHudSignature = "";
+    lastLeaderboardSignature = "";
+
+    updateAppearance();
+  });
+
+  socket.on("playerJoined", player => {
+    if (!players.some(p => p.id === player.id)) {
+      players.push(player);
+    }
+  });
+
+  socket.on("playerLeft", id => {
+    players = players.filter(p => p.id !== id);
+
+    for (const snapshot of snapshots) {
+      snapshot.players = snapshot.players.filter(p => p.id !== id);
+    }
+  });
+
+  socket.on("state", state => {
+    if (!state || !Array.isArray(state.players)) return;
+
+    const now = performance.now();
+
+    world = state.world || world;
+    players = state.players;
+    bots = state.bots || [];
+
+    snapshots.push({
+      time: now,
+      players: clonePlayers(players)
+    });
+
+    while (snapshots.length > MAX_SNAPSHOTS) {
+      snapshots.shift();
+    }
+
+    const cutoff = now - 1500;
+
+    while (snapshots.length > 2 && snapshots[1].time < cutoff) {
+      snapshots.shift();
+    }
+  });
+
+  socket.on("playerJoined", player => {
+    if (!snapshots.length) return;
+
+    for (const snapshot of snapshots) {
+      if (!snapshot.players.some(p => p.id === player.id)) {
+        snapshot.players.push({ ...player });
+      }
+    }
+  });
+
+  socket.on("botTaken", id => {
+    bots = bots.filter(bot => bot.id !== id);
+  });
+
+  socket.on("notice", showToast);
+
+  playButton.addEventListener("click", () => {
+    if (!socket.connected) {
+      status.textContent = "Server not connected.";
+      return;
+    }
+
+    playButton.disabled = true;
+
+    socket.emit("join", {
+      name: document.getElementById("name").value || "Player"
+    });
+  });
+
+  patternInput.addEventListener("change", updateAppearance);
+
+  function clonePlayers(list) {
+    return list.map(player => ({
+      ...player,
+      hook: player.hook ? { ...player.hook } : null
+    }));
+  }
+
+  function showToast(message) {
+    const toast = document.getElementById("toast");
+
+    toast.textContent = String(message);
+    toast.style.display = "block";
+
+    clearTimeout(toastTimer);
+
+    toastTimer = setTimeout(() => {
+      toast.style.display = "none";
+    }, 1800);
+  }
+
+  function getMe() {
+    return players.find(player => player.id === myId) || null;
+  }
+
+  function getInterpolatedPlayers(renderTime) {
+    if (!snapshots.length) return players;
+
+    if (snapshots.length === 1) {
+      return snapshots[0].players;
+    }
+
+    let older = snapshots[0];
+    let newer = snapshots[1];
+
+    if (renderTime <= older.time) {
+      return older.players;
+    }
+
+    let found = false;
+
+    for (let i = 0; i < snapshots.length - 1; i++) {
+      if (
+        snapshots[i].time <= renderTime &&
+        snapshots[i + 1].time >= renderTime
+      ) {
+        older = snapshots[i];
+        newer = snapshots[i + 1];
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      const latest = snapshots[snapshots.length - 1];
+      const previous = snapshots[snapshots.length - 2];
+      const elapsed = renderTime - latest.time;
+
+      if (elapsed <= 0) {
+        return latest.players;
+      }
+
+      const extraTime = Math.min(elapsed, 35);
+      const interval = Math.max(1, latest.time - previous.time);
+      const factor = extraTime / interval;
+
+      const previousById = new Map(
+        previous.players.map(player => [player.id, player])
+      );
+
+      return latest.players.map(current => {
+        const prior = previousById.get(current.id);
+
+        if (!prior || extraTime <= 0) return current;
+
+        return {
+          ...current,
+          x: current.x + (current.x - prior.x) * factor,
+          y: current.y + (current.y - prior.y) * factor
+        };
+      });
+    }
+
+    const interval = newer.time - older.time;
+    const alpha = interval > 0
+      ? Math.max(0, Math.min(1, (renderTime - older.time) / interval))
+      : 1;
+
+    const oldById = new Map(
+      older.players.map(player => [player.id, player])
+    );
+
+    return newer.players.map(current => {
+      const prior = oldById.get(current.id);
+
+      if (!prior) return current;
+
+      return {
+        ...current,
+        x: prior.x + (current.x - prior.x) * alpha,
+        y: prior.y + (current.y - prior.y) * alpha
+      };
+    });
+  }
+
+  function sendInput() {
+    if (!joined) return;
+
+    const input = {
+      left: !!(keys.ArrowLeft || keys.KeyA),
+      right: !!(keys.ArrowRight || keys.KeyD),
+      jump: !!(keys.Space || keys.KeyW || keys.ArrowUp),
+      mouseDown: mouse.down,
+      aimX: mouse.x + cameraX,
+      aimY: mouse.y + cameraY
+    };
+
+    const signature = JSON.stringify(input);
+
+    if (signature !== lastSentInput) {
+      socket.emit("input", input);
+      lastSentInput = signature;
+    }
+  }
+
+  addEventListener("keydown", event => {
+    if (
+      ["Space", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.code)
+    ) {
+      event.preventDefault();
+    }
+
+    keys[event.code] = true;
+    sendInput();
+  }, { passive: false });
+
+  addEventListener("keyup", event => {
+    keys[event.code] = false;
+    sendInput();
+  });
+
+  canvas.addEventListener("mousemove", event => {
+    mouse.x = event.clientX;
+    mouse.y = event.clientY;
+  });
+
+  canvas.addEventListener("mousedown", event => {
+    if (event.button === 0) {
+      mouse.down = true;
+      sendInput();
+    }
+  });
+
+  addEventListener("mouseup", event => {
+    if (event.button === 0) {
+      mouse.down = false;
+      sendInput();
+    }
+  });
+
+  addEventListener("blur", () => {
+    keys = {};
+    mouse.down = false;
+    sendInput();
+  });
+
+  restartButton.addEventListener("click", () => {
+    if (joined) socket.emit("restart");
+  });
+
+  function drawCircle(x, y, radius, color) {
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  function drawPatternCircle(x, y, radius, color, pattern) {
+    ctx.save();
+
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.clip();
+
+    ctx.strokeStyle = "rgba(255,255,255,0.82)";
+    ctx.lineWidth = 1.5;
+
+    if (pattern === "Horizontal" || pattern === "Diagonal") {
+      for (let offset = -radius * 2; offset <= radius * 2; offset += 7) {
+        ctx.beginPath();
+
+        if (pattern === "Horizontal") {
+          ctx.moveTo(x - radius, y + offset);
+          ctx.lineTo(x + radius, y + offset);
+        } else {
+          ctx.moveTo(x - radius, y + offset);
+          ctx.lineTo(x + radius, y + offset + radius * 2);
+        }
+
+        ctx.stroke();
+      }
+    } else if (pattern === "Hexagon") {
+      const size = 5;
+      const stepX = size * 1.75;
+      const stepY = size * 1.5;
+
+      for (let row = -radius; row <= radius; row += stepY) {
+        for (let col = -radius; col <= radius; col += stepX) {
+          const hx = x + col +
+            (Math.round(row / stepY) % 2) * size * 0.875;
+          const hy = y + row;
+
+          ctx.beginPath();
+
+          for (let i = 0; i < 6; i++) {
+            const angle = Math.PI / 3 * i;
+            const px = hx + Math.cos(angle) * size;
+            const py = hy + Math.sin(angle) * size;
+
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+
+          ctx.closePath();
+          ctx.stroke();
+        }
+      }
+    }
+
+    ctx.restore();
+
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = "rgba(255,255,255,0.45)";
+    ctx.lineWidth = 1;
+    ctx.stroke();
+  }
+
+  function updateHud(player) {
+    const signature =
+      `${player.height}|${player.reds}|${player.wallHops}`;
+
+    if (signature === lastHudSignature) return;
+
+    document.getElementById("height").textContent =
+      "HEIGHT: " + player.height + "m";
+
+    document.getElementById("reds").textContent =
+      "REDS: " + player.reds;
+
+    document.getElementById("hops").textContent =
+      "WALL HOPS: " + player.wallHops + "/5";
+
+    lastHudSignature = signature;
+  }
+
+  function updateLeaderboard(renderedPlayers) {
+    const sorted = [...renderedPlayers]
+      .sort((a, b) => b.height - a.height)
+      .slice(0, 7);
+
+    const signature = sorted
+      .map((player, index) =>
+        `${index + 1}:${player.id}:${player.name}:${player.height}`
+      )
+      .join("|");
+
+    if (signature === lastLeaderboardSignature) return;
+
+    const leaderRows = document.getElementById("leaderRows");
+
+    if (!sorted.length) {
+      leaderRows.textContent = "Waiting for players...";
+      lastLeaderboardSignature = signature;
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    sorted.forEach((player, index) => {
+      const row = document.createElement("div");
+      row.className = "leaderRow";
+
+      const name = document.createElement("span");
+      name.textContent =
+        (index + 1) + ". " + player.name +
+        (player.id === myId ? " (you)" : "");
+
+      const height = document.createElement("span");
+      height.textContent = player.height + "m";
+
+      row.append(name, height);
+      fragment.appendChild(row);
+    });
+
+    leaderRows.replaceChildren(fragment);
+    lastLeaderboardSignature = signature;
+  }
+
+  function draw() {
+    const now = performance.now();
+    const width = innerWidth;
+    const height = innerHeight;
+
+    lastFrameTime = now;
+
+    ctx.clearRect(0, 0, width, height);
+
+    const renderedPlayers = getInterpolatedPlayers(now - SNAPSHOT_DELAY);
+
+    localPlayer =
+      renderedPlayers.find(player => player.id === myId) ||
+      getMe();
+
+    if (localPlayer) {
+      cameraX = localPlayer.x - width / 2;
+      cameraY = localPlayer.y - height / 2;
+
+      cameraX = Math.max(
+        -width / 2 + world.width / 2,
+        Math.min(world.width - width / 2, cameraX)
+      );
+
+      restartButton.style.display = localPlayer.floating
+        ? "block"
+        : "none";
+
+      updateHud(localPlayer);
+    } else {
+      cameraX = 0;
+      cameraY = world.height - height;
+    }
+
+    const altitude = localPlayer
+      ? Math.max(0, (world.height - localPlayer.y) / world.height)
+      : 0;
+
+    const blue = Math.max(0, 190 * (1 - altitude * 2.5));
+    const sky = ctx.createLinearGradient(0, 0, 0, height);
+
+    sky.addColorStop(
+      0,
+      `rgb(${Math.floor(blue * 0.55)},${Math.floor(blue * 0.82)},${Math.floor(blue)})`
+    );
+    sky.addColorStop(1, "#03050a");
+
+    ctx.fillStyle = localPlayer && localPlayer.floating
+      ? "#070716"
+      : sky;
+
+    ctx.fillRect(0, 0, width, height);
+
+    ctx.save();
+    ctx.translate(-cameraX, -cameraY);
+
+    ctx.fillStyle = "#111722";
+    ctx.fillRect(-1500, 0, 1500, world.height + 2000);
+    ctx.fillRect(world.width, 0, 1500, world.height + 2000);
+
+    ctx.fillStyle = "#222936";
+    ctx.fillRect(-1000, world.height, world.width + 2000, 1000);
+
+    for (const point of grapplePoints) {
+      const sx = point.x - cameraX;
+      const sy = point.y - cameraY;
+
+      if (
+        sx < -50 || sx > width + 50 ||
+        sy < -50 || sy > height + 50
+      ) continue;
+
+      drawCircle(point.x, point.y, point.radius, "#ff6500");
+
+      if (Math.hypot(mouse.x - sx, mouse.y - sy) < 150) {
+        ctx.strokeStyle = "#aaa";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(
+          point.x, point.y,
+          point.radius + 6,
+          0, Math.PI * 2
+        );
+        ctx.stroke();
+      }
+    }
+
+    for (const bot of bots) {
+      const sx = bot.x - cameraX;
+      const sy = bot.y - cameraY;
+
+      if (
+        sx < -40 || sx > width + 40 ||
+        sy < -40 || sy > height + 40
+      ) continue;
+
+      drawCircle(bot.x, bot.y, 18, "#ff3030");
+
+      ctx.fillStyle = "#fff";
+      ctx.font = "bold 10px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText("+" + bot.reds, bot.x, bot.y + 3);
+    }
+
+    drawCircle(
+      world.moon.x,
+      world.moon.y,
+      world.moon.radius,
+      "#e8edf5"
+    );
+
+    drawCircle(world.moon.x - 130, world.moon.y - 80, 65, "#cbd2df");
+    drawCircle(world.moon.x + 145, world.moon.y + 95, 90, "#cbd2df");
+    drawCircle(world.moon.x + 35, world.moon.y - 190, 45, "#cbd2df");
+
+    for (const player of renderedPlayers) {
+      if (player.hook) {
+        ctx.strokeStyle = player.id === myId ? "#bbb" : "#777";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(player.x, player.y);
+        ctx.lineTo(player.hook.x, player.hook.y);
+        ctx.stroke();
+      }
+
+      drawPatternCircle(
+        player.x,
+        player.y,
+        player.size,
+        player.color || "#00ff66",
+        player.pattern || "Solid"
+      );
+
+      ctx.fillStyle = "#bbb";
+      ctx.font = "12px Arial";
+      ctx.textAlign = "center";
+      ctx.fillText(player.name, player.x, player.y - 27);
+    }
+
+    ctx.restore();
+
+    updateLeaderboard(renderedPlayers);
+
+    requestAnimationFrame(draw);
+  }
+
+  setInterval(sendInput, 1000 / PLAYER_INPUT_RATE);
+
+  draw();
 })();
-
+</script>
+</body>
+</html>
